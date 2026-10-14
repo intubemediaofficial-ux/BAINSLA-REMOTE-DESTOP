@@ -1,0 +1,12 @@
+[Unit]
+Description=Bainsla Remote relay server (hbbr)
+After=network.target
+[Service]
+User=bremote
+WorkingDirectory=/opt/bainsla-remote/data
+ExecStart=/opt/bainsla-remote/server/amd64/hbbr -k _
+Restart=always
+RestartSec=3
+LimitNOFILE=100000
+[Install]
+WantedBy=multi-user.target

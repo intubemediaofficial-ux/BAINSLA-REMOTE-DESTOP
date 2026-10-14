@@ -1,0 +1,7 @@
+node_modules/
+*.zip
+*.tar.gz
+*.exe
+*.apk
+id_ed25519
+__pycache__/

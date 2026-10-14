@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bainsla Remote — Unlimited Remote Desktop</title>
+<meta name="description" content="Bainsla Remote: private, unlimited remote desktop for Windows, Android and browser.">
+<style>
+:root{--bg:#0b1020;--card:#141b33;--line:#24305a;--txt:#e8ecff;--mut:#9aa6d6;--pri:#3b82f6;--acc:#22d3ee;--ok:#22c55e}
+*{box-sizing:border-box}html,body{overflow-x:hidden}.hero>*,.grid>*{min-width:0}body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(1200px 600px at 80% -10%,#1e3a8a55,transparent),var(--bg);color:var(--txt)}
+a{color:inherit;text-decoration:none}.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+.logo{display:flex;gap:10px;align-items:center;font-weight:800;font-size:20px}.logo i{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--pri),var(--acc));display:grid;place-items:center;font-style:normal}
+nav a{margin-left:18px;color:var(--mut);font-size:15px}nav a:hover{color:var(--txt)}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding:50px 0 30px}
+h1{font-size:46px;line-height:1.1;margin:0 0 14px}h1 b{background:linear-gradient(90deg,var(--pri),var(--acc));-webkit-background-clip:text;color:transparent}
+.lead{color:var(--mut);font-size:18px;line-height:1.6}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
+.btn{color:inherit;font:inherit;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;padding:13px 20px;border-radius:12px;font-weight:700;border:1px solid var(--line);background:var(--card)}
+.btn.pri{background:linear-gradient(135deg,var(--pri),#2563eb);border:0}.btn:hover{transform:translateY(-1px)}
+.connect{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 20px 60px #0007}
+.connect h3{margin:0 0 6px}.connect p{color:var(--mut);margin:0 0 16px;font-size:14px}
+.connect label{font-size:13px;color:var(--mut)}.connect input{width:100%;margin:6px 0 14px;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0e1430;color:var(--txt);font-size:16px}
+.connect .btn{width:100%;justify-content:center}
+.badges{display:flex;gap:16px;flex-wrap:wrap;margin-top:22px;color:var(--mut);font-size:14px}.badges span:before{content:"✔ ";color:var(--ok)}
+section{padding:40px 0}h2{font-size:30px;margin:0 0 20px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
+.card h4{margin:6px 0 8px;font-size:19px}.card p{color:var(--mut);margin:0 0 16px;line-height:1.55;font-size:15px}
+.ico{font-size:30px}.steps{counter-reset:s}.step{position:relative;padding-left:52px}.step:before{counter-increment:s;content:counter(s);position:absolute;left:18px;top:22px;width:26px;height:26px;border-radius:50%;background:var(--pri);display:grid;place-items:center;font-weight:800;font-size:14px}
+code,.cfg{font-family:ui-monospace,Consolas,monospace}.cfg{display:block;word-break:break-all;overflow-wrap:anywhere;background:#0e1430;border:1px dashed var(--line);border-radius:10px;padding:12px;font-size:12px;color:#c7d2fe;margin:10px 0}
+footer{color:var(--mut);text-align:center;padding:30px 0;border-top:1px solid var(--line);margin-top:30px;font-size:14px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ok);color:#04130a;padding:10px 18px;border-radius:10px;font-weight:700;display:none}
+@media(max-width:860px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:1fr}h1{font-size:34px}nav{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div class="logo"><i>⇄</i>Bainsla Remote</div>
+<nav><a href="#download">Download</a><a href="#how">How it works</a><a href="#security">Security</a><a href="/_admin/">Admin login</a></nav></header>
+
+<div class="hero">
+ <div>
+  <h1>Control any computer, <b>anytime</b>. No limits.</h1>
+  <p class="lead">Your own private remote desktop — like AnyDesk, running on Bainsla's own server. No time limits, no session limits, no third-party servers. Install once, it keeps working even after you close this website.</p>
+  <div class="btns">
+   <a class="btn pri" href="/download/__WIN_FILE__">⬇ Download for Windows</a>
+   <a class="btn" href="/download/BainslaRemote.apk">⬇ Android App (APK)</a>
+   <a class="btn" href="/webclient/">🌐 Open Web Client</a>
+  </div>
+  <div class="badges"><span>Unlimited sessions</span><span>End-to-end encrypted</span><span>Self-hosted</span></div>
+ </div>
+ <form class="connect" onsubmit="go(event)">
+  <h3>Connect to a computer</h3>
+  <p>Ask the other person for the ID and one-time code shown in their Bainsla Remote app.</p>
+  <label>Remote ID</label><input id="rid" inputmode="numeric" placeholder="e.g. 123 456 789" required>
+  <button class="btn pri" type="submit">Connect in browser →</button>
+  <p style="margin:12px 0 0">The code is asked on the next screen. Prefer the desktop app for best speed.</p>
+ </form>
+</div>
+
+<section id="how"><h2>How it works</h2>
+ <div class="grid steps">
+  <div class="card step"><h4>Other person installs</h4><p>Send them this page link. They click <b>Download for Windows</b> (or Android APK) and open it. It connects to our server automatically.</p></div>
+  <div class="card step"><h4>They share ID + code</h4><p>The app shows an <b>ID</b> and a one-time <b>password/code</b>. A new code is generated every session, so old codes stop working.</p></div>
+  <div class="card step"><h4>You connect</h4><p>Open the Web Client (or your own app), enter the ID, then the code — and control their screen, mouse, keyboard and files.</p></div>
+ </div>
+</section>
+
+<section id="download"><h2>Downloads</h2>
+ <div class="grid">
+  <div class="card"><div class="ico">🪟</div><h4>Windows</h4><p>Pre-configured for our server — no setup. Run it directly, or click <i>Install</i> inside the app for permanent, auto-start access.</p><a class="btn pri" href="/download/__WIN_FILE__">Download .exe</a></div>
+  <div class="card"><div class="ico">🤖</div><h4>Android</h4><p>Install the APK. Then open <i>Settings → ID/Relay Server</i>, tap <i>Import</i> after copying the server config below.</p><a class="btn pri" href="/download/BainslaRemote.apk">Download APK</a> <button class="btn" type="button" onclick="cp()">Copy config</button></div>
+  <div class="card"><div class="ico">🌐</div><h4>Browser</h4><p>Control a computer from any browser — Chrome, Edge, Firefox — without installing anything on your side.</p><a class="btn pri" href="/webclient/">Open Web Client</a></div>
+ </div>
+ <div class="card" style="margin-top:18px"><h4>Server config (for Android / manual setup)</h4><p>Copy this and paste it in the app: <i>Settings → Network → ID/Relay Server → Import server config</i>.</p><code class="cfg" id="cfg">__CFG__</code><button class="btn" type="button" onclick="cp()">Copy config</button></div>
+</section>
+
+<section id="security"><h2>Security</h2>
+ <div class="grid">
+  <div class="card"><h4>🔒 Private server</h4><p>All connections go through Bainsla's own server with its own encryption key. No AnyDesk/TeamViewer company in the middle.</p></div>
+  <div class="card"><h4>🔑 One-time codes</h4><p>Each session uses a fresh code. The person on the other side can see who is connected and disconnect any time.</p></div>
+  <div class="card"><h4>🛡️ Admin control</h4><p>Admins see all devices, online status and connection logs. Repeated wrong passwords get the IP blocked automatically.</p></div>
+ </div>
+</section>
+<footer>© Bainsla Remote · <a href="/_admin/">Admin panel</a></footer>
+</div>
+<div class="toast" id="t">Copied!</div>
+<script>
+function go(e){e.preventDefault();var id=document.getElementById('rid').value.replace(/\s+/g,'');location.href='/webclient/#/'+(id?'?id='+encodeURIComponent(id):'');try{localStorage.setItem('bainsla-last-id',id)}catch(x){}}
+function cp(){var s=document.getElementById('cfg').textContent.trim();(navigator.clipboard?navigator.clipboard.writeText(s):Promise.reject()).catch(function(){var a=document.createElement('textarea');a.value=s;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()}).finally(function(){var t=document.getElementById('t');t.style.display='block';setTimeout(function(){t.style.display='none'},1500)})}
+</script>
+</body>
+</html>

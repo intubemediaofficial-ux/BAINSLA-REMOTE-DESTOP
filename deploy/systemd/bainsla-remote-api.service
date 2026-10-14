@@ -1,0 +1,12 @@
+[Unit]
+Description=Bainsla Remote API + admin + web client
+After=network.target bainsla-remote-hbbs.service
+[Service]
+User=bremote
+WorkingDirectory=/opt/bainsla-remote/api/release
+Environment=TZ=Asia/Kolkata
+ExecStart=/opt/bainsla-remote/api/release/apimain
+Restart=always
+RestartSec=3
+[Install]
+WantedBy=multi-user.target
