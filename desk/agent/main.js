@@ -122,7 +122,7 @@ function updateTray() {
   }
   tray.setToolTip(active ? 'Bainsla Remote — remote session active' : 'Bainsla Remote');
   const menu = [
-    { label: 'Open', click: () => { mainWindow?.show(); mainWindow?.focus(); } },
+    { label: 'Open', click: showMainWindow },
     { label: 'Copy ID', click: () => {
       const config = readConfig();
       if (config.id) clipboard.writeText(config.id);
@@ -213,7 +213,8 @@ function createTray() {
   }
   tray = new Tray(icon);
   updateTray();
-  tray.on('double-click', () => { mainWindow?.show(); mainWindow?.focus(); });
+  tray.on('double-click', showMainWindow);
+  if (!mac.IS_MAC) tray.on('click', showMainWindow);
 }
 function connectHost(caller = 'unspecified') {
   logEvent(`connectHost caller=${caller}`);
@@ -748,7 +749,38 @@ function nutKey(Key, code) {
   return Key[map[code]];
 }
 
+const SHOW_REQUEST_MAX_AGE = 30000;
+function showRequestPath() {
+  return path.join(app.getPath('userData'), 'show-window.request');
+}
+// A shortcut-launched copy cannot always wake the running agent through the single-instance message
+// (the logon task runs it elevated, and Windows blocks messages from lower-integrity processes), so it
+// also leaves a marker file that the running agent polls.
+function requestShowWindow() {
+  try {
+    fs.mkdirSync(path.dirname(showRequestPath()), { recursive: true });
+    fs.writeFileSync(showRequestPath(), String(Date.now()));
+  } catch {}
+}
+function consumeShowRequest() {
+  try {
+    const age = Date.now() - Number(fs.readFileSync(showRequestPath(), 'utf8'));
+    fs.rmSync(showRequestPath(), { force: true });
+    return age >= 0 && age < SHOW_REQUEST_MAX_AGE;
+  } catch {
+    return false;
+  }
+}
+function showMainWindow() {
+  if (!mainWindow) createMainWindow();
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
 const gotLock = app.requestSingleInstanceLock();
+if (!gotLock && !process.argv.includes('--hidden') && !process.argv.includes('--host')
+  && !process.argv.includes('--service') && !mac.IS_MAC) requestShowWindow();
 const handedOver = gotLock && mac.IS_MAC && readConfig().autostart
   && mac.handOverToLaunchAgent(!process.argv.includes('--hidden'));
 if (!gotLock) app.quit();
@@ -756,9 +788,9 @@ else if (handedOver) app.exit(0);
 else {
   app.on('second-instance', (_event, argv) => {
     logEvent('second-instance');
-    if (argv.includes('--launchd')) return;
-    mainWindow?.show();
-    mainWindow?.focus();
+    if (argv.includes('--launchd') || argv.includes('--hidden') || argv.includes('--host')) return;
+    consumeShowRequest();
+    showMainWindow();
   });
   app.on('activate', () => { mainWindow?.show(); mainWindow?.focus(); });
   app.whenReady().then(() => {
@@ -772,7 +804,9 @@ else {
     registerIpc();
     createTray();
     const showRequested = mac.IS_MAC && mac.consumeShowWindow();
-    createMainWindow(!showRequested && (SESSION_AGENT_MODE || process.argv.includes('--hidden')));
+    const showRequestedByShortcut = consumeShowRequest();
+    createMainWindow(!showRequested && !showRequestedByShortcut && (SESSION_AGENT_MODE || process.argv.includes('--hidden')));
+    if (!mac.IS_MAC) setInterval(() => { if (consumeShowRequest()) showMainWindow(); }, 1000).unref?.();
     const config = readConfig();
     if (mac.IS_MAC) {
       if (app.getLoginItemSettings().openAtLogin) app.setLoginItemSettings({ openAtLogin: false });
