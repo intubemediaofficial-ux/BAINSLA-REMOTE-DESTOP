@@ -95,7 +95,7 @@ export function createViewer(options = {}) {
       if (!response?.ok) {
         pendingSessionSignals = [];
         pendingSessionEvents = [];
-        return setStatus(response?.error === 'offline' ? 'Desk is offline' : `Could not connect: ${response?.error || 'error'}`);
+        return setStatus(({ not_found: 'No device with this ID or name. Ask for the ID shown in their Bainsla Remote app.', offline: 'Desk is offline. Ask them to open the Bainsla Remote app.', blocked: 'This device is blocked by the admin.', invalid_password: 'Wrong password.', rate_limited: 'Too many attempts. Wait a minute and try again.' })[response?.error] || `Could not connect: ${response?.error || 'error'}`);
       }
       sessionId = response.sessionId;
       setStatus('Waiting for accept…');
