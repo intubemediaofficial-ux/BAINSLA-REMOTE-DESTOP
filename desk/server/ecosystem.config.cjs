@@ -5,9 +5,9 @@ const envKeys = [
 
 module.exports = {
   apps: [{
-    name: 'remote',
+    name: 'bainsla-desk',
     script: 'server.js',
-    cwd: '/root/remote/app/server',
+    cwd: __dirname,
     interpreter: process.execPath,
     instances: 1,
     exec_mode: 'fork',
