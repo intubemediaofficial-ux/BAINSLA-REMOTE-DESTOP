@@ -16,6 +16,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Fetch WinSW service wrapper
+        shell: bash
+        run: |
+          curl -fsSL -o desk/agent/build/BainslaRemoteService.exe https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe
+          echo "05b82d46ad331cc16bdc00de5c6332c1ef818df8ceefcd49c726553209b3a0da  desk/agent/build/BainslaRemoteService.exe" | sha256sum -c -
       - name: Build installer
         working-directory: desk/agent
         run: |
@@ -24,11 +29,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: bainsla-remote-windows
-          path: desk/agent/release/*.exe
+          path: desk/agent/dist/*.exe
       - name: Publish to release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view desk-latest >/dev/null 2>&1 || gh release create desk-latest --title "Bainsla Remote app (latest build)" --notes "Automatic build" --prerelease --target "$GITHUB_SHA"
-          gh release upload desk-latest desk/agent/release/*.exe --clobber
+          gh release upload desk-latest desk/agent/dist/*.exe --clobber
