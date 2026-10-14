@@ -321,7 +321,7 @@ th { font-size: 12px; }
 .tile { position: relative; display: flex; flex-direction: column; gap: 8px; min-height: 170px; padding: 20px; border-radius: 12px; color: #fff; overflow: hidden; border: 1px solid #ffffff14; }
 .tile[hidden] { display: none; }
 .tile strong { font-size: 19px; }
-.tile span { font-size: 13px; line-height: 1.5; color: #ffffffd0; }
+.tile span { font-size: 13px; line-height: 1.5; color: #ffffffd0; padding-right: 34px; }
 .tile b { position: absolute; right: 18px; bottom: 12px; font-size: 40px; opacity: .35; }
 a.tile:hover { transform: translateY(-2px); box-shadow: 0 14px 34px #0007; }
 .tile-win { background: linear-gradient(135deg, #2563eb, #4f46e5); }
