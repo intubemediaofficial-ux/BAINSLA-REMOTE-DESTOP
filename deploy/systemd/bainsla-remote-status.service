@@ -1,0 +1,13 @@
+[Unit]
+Description=Bainsla Remote online-status lookup
+After=network.target bainsla-remote-api.service
+[Service]
+User=bremote
+ExecStart=/usr/bin/python3 /opt/bainsla-remote/status/status.py
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadOnlyPaths=/opt/bainsla-remote
+[Install]
+WantedBy=multi-user.target

@@ -6,3 +6,5 @@ localStorage.setItem("custom-rendezvous-server", "__SERVER_IP__:21116");
 localStorage.setItem("key", "__PUBLIC_KEY__");
 window.webclient_magic_queryonline = 0;
 window.ws_host = "wss://" + location.host;
+// One-time code handed over by the landing page ("ID - password"), used once for auto-login.
+try { window.__bpw = sessionStorage.getItem("bainsla-pw") || ""; sessionStorage.removeItem("bainsla-pw"); } catch (e) {}

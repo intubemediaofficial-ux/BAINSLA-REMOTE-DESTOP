@@ -4,6 +4,7 @@
   instead of the public rs-*.rustdesk.com servers.
 - Load /webclient-config/index.js (server + key presets), drop Firebase analytics and the
   caching service worker so updates reach users immediately.
+- Auto-login with the one-time password the landing page passes for "ID - password" codes.
 """
 import re
 import sys
@@ -17,6 +18,14 @@ if 'location.protocol=="https:"' not in s:
     if n != 1:
         sys.exit("websocket helper not found in index.js")
     js.write_text(s)
+ask = 'this._password||this.msgbox("input-password","Password Required",""),this.login()'
+salt_fn = re.search(r"let s=(\w+)\(\[u,t\]\);this\._password=s", s)
+if ask in s and salt_fn:
+    auto = '(this._password=' + salt_fn.group(1) + '([window.__bpw,this._hash.salt]),window.__bpw="",this.login())'
+    s = s.replace(ask, '(this._password||!window.__bpw)?(' + ask + '):' + auto, 1)
+    js.write_text(s)
+elif "window.__bpw" not in s:
+    sys.exit("password prompt not found in index.js")
 
 html = web / "index.html"
 h = html.read_text()
