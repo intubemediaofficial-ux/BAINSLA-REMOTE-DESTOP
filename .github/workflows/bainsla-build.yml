@@ -1,0 +1,17 @@
+name: Bainsla Remote client build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [bainsla-client]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/flutter-build.yml
+    secrets: inherit
+    with:
+      upload-artifact: true
+      upload-tag: bainsla-client
