@@ -28,11 +28,12 @@ install -m 644 "$HERE/web-patches/yuv.js" "$WEB/yuv.js"
 [ -f "$WEB/js/dist/index.js.orig" ] || cp "$WEB/js/dist/index.js" "$WEB/js/dist/index.js.orig"
 python3 "$HERE/web-patches/patch_webclient.py" "$WEB"
 
+install -D -m 644 "$HERE/deploy/status/status.py" "$ROOT/status/status.py"
 install -m 644 "$HERE"/deploy/systemd/*.service /etc/systemd/system/
 sed -i "s/162.35.107.192/$SERVER_IP/g" /etc/systemd/system/bainsla-remote-hbbs.service
 chown -R bremote:bremote "$ROOT"
 systemctl daemon-reload
-systemctl enable --now bainsla-remote-hbbs bainsla-remote-hbbr bainsla-remote-api
+systemctl enable --now bainsla-remote-hbbs bainsla-remote-hbbr bainsla-remote-api bainsla-remote-status
 sleep 3
 
 KEY=$(cat "$ROOT/data/id_ed25519.pub")

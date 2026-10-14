@@ -22,6 +22,13 @@ h1{font-size:46px;line-height:1.1;margin:0 0 14px}h1 b{background:linear-gradien
 .connect h3{margin:0 0 6px}.connect p{color:var(--mut);margin:0 0 16px;font-size:14px}
 .connect label{font-size:13px;color:var(--mut)}.connect input{width:100%;margin:6px 0 14px;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#0e1430;color:var(--txt);font-size:16px}
 .connect .btn{width:100%;justify-content:center}
+.book{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}.book h4{margin:0 0 10px;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+.book h4 button{background:none;border:0;color:var(--acc);font:inherit;font-size:13px;cursor:pointer}
+.pc{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:#0e1430}
+.pc .dot{width:10px;height:10px;border-radius:50%;background:#64748b;flex:none}.pc .dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.pc .nm{flex:1;min-width:0}.pc .nm b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pc .nm small{color:var(--mut);font-size:12px}
+.pc button{border:1px solid var(--line);background:var(--card);color:var(--txt);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit;font-size:13px}.pc button.x{color:#f87171;padding:6px 8px}
+.empty{color:var(--mut);font-size:13px;margin:0}.save{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut);margin:-4px 0 14px}.connect .save input{width:auto;margin:0}
 .badges{display:flex;gap:16px;flex-wrap:wrap;margin-top:22px;color:var(--mut);font-size:14px}.badges span:before{content:"✔ ";color:var(--ok)}
 section{padding:40px 0}h2{font-size:30px;margin:0 0 20px}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
@@ -52,18 +59,20 @@ footer{color:var(--mut);text-align:center;padding:30px 0;border-top:1px solid va
  </div>
  <form class="connect" onsubmit="go(event)">
   <h3>Connect to a computer</h3>
-  <p>Ask the other person for the ID and one-time code shown in their Bainsla Remote app.</p>
-  <label>Remote ID</label><input id="rid" inputmode="numeric" placeholder="e.g. 123 456 789" required>
-  <button class="btn pri" type="submit">Connect in browser →</button>
-  <p style="margin:12px 0 0">The code is asked on the next screen. Prefer the desktop app for best speed.</p>
+  <p>Ask the other person for the <b>code</b> shown in their Bainsla Remote app. It looks like <code>123 456 789 - 482916</code>.</p>
+  <label>Connection code</label><input id="rid" autocomplete="off" spellcheck="false" placeholder="e.g. 123 456 789 - 482916" required>
+  <label class="save"><input type="checkbox" id="keep"> Save this computer in my list</label>
+  <button class="btn pri" type="submit">Connect →</button>
+  <p style="margin:12px 0 0">Only have the ID (or a name like <code>staff-rajesh</code>)? Enter it and type the password on the next screen.</p>
+  <div class="book"><h4>My computers <button type="button" onclick="addPc()">+ Add</button></h4><div id="pcs"></div></div>
  </form>
 </div>
 
 <section id="how"><h2>How it works</h2>
  <div class="grid steps">
   <div class="card step"><h4>Other person installs</h4><p>Send them this page link. They click <b>Download for Windows</b> (or Android APK) and open it. It connects to our server automatically.</p></div>
-  <div class="card step"><h4>They share ID + code</h4><p>The app shows an <b>ID</b> and a one-time <b>password/code</b>. A new code is generated every session, so old codes stop working.</p></div>
-  <div class="card step"><h4>You connect</h4><p>Open the Web Client (or your own app), enter the ID, then the code — and control their screen, mouse, keyboard and files.</p></div>
+  <div class="card step"><h4>They tell you the code</h4><p>As soon as the app opens it shows <b>Your Code</b>. They send it to you on WhatsApp or tell you on a call. A new code can be made any time, so old codes stop working.</p></div>
+  <div class="card step"><h4>You connect</h4><p>Type the code in the box at the top of this page (or in your own Bainsla Remote app) and press Connect. Their screen, mouse, keyboard and files are yours to control.</p></div>
  </div>
 </section>
 
@@ -87,7 +96,21 @@ footer{color:var(--mut);text-align:center;padding:30px 0;border-top:1px solid va
 </div>
 <div class="toast" id="t">Copied!</div>
 <script>
-function go(e){e.preventDefault();var id=document.getElementById('rid').value.replace(/\s+/g,'');location.href='/webclient/#/'+(id?'?id='+encodeURIComponent(id):'');try{localStorage.setItem('bainsla-last-id',id)}catch(x){}}
+function book(){try{return JSON.parse(localStorage.getItem('bainsla-book')||'[]')}catch(x){return[]}}
+function saveBook(b){try{localStorage.setItem('bainsla-book',JSON.stringify(b.slice(0,30)))}catch(x){}}
+function remember(id,label){var b=book().filter(function(p){return p.id!==id});b.unshift({id:id,label:label||''});saveBook(b);draw()}
+function open_(id,pw){try{pw?sessionStorage.setItem('bainsla-pw',pw):sessionStorage.removeItem('bainsla-pw');localStorage.setItem('bainsla-last-id',id)}catch(x){}location.href='/webclient/#/?id='+encodeURIComponent(id)}
+function resolve(k){return /^\d+$/.test(k)?Promise.resolve(k):fetch('/status?ids='+encodeURIComponent(k)).then(function(r){return r.json()}).then(function(d){return d[k]&&d[k].id}).catch(function(){return null})}
+function go(e){e.preventDefault();var v=document.getElementById('rid').value.trim(),m=v.match(/^([\w\s-]+?)\s+[-–]\s+(\S+)$/)||v.match(/^(\d[\d\s]*?)\s*[-–]\s*(\S+)$/),key=(m?m[1]:v).replace(/\s+/g,''),pw=m?m[2]:'';if(!key)return;
+ resolve(key).then(function(id){if(!id){alert('No computer found with "'+key+'". Check the ID or name.');return}if(document.getElementById('keep').checked)remember(id,key===id?'':key);open_(id,pw)})}
+function addPc(){var id=(prompt('Computer ID or name (e.g. 123 456 789 or staff-rajesh)')||'').replace(/\s+/g,'');if(!id)return;var l=prompt('Label for this computer (e.g. Office PC)')||'';resolve(id).then(function(r){if(!r){alert('No computer found with "'+id+'".');return}remember(r,l||(id===r?'':id))})}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return'&#'+c.charCodeAt(0)+';'})}
+function fmt(id){return /^\d+$/.test(id)?id.replace(/\B(?=(\d{3})+$)/g,' '):id}
+function draw(st){var b=book(),el=document.getElementById('pcs');if(!b.length){el.innerHTML='<p class="empty">No saved computers yet. Tick “Save this computer” when you connect, or press + Add.</p>';return}
+ el.innerHTML=b.map(function(p,i){var on=st&&st[p.id]&&st[p.id].online;return'<div class="pc"><span class="dot'+(on?' on':'')+'" title="'+(on?'Online':'Offline')+'"></span><div class="nm"><b>'+esc(p.label||fmt(p.id))+'</b><small>'+fmt(esc(p.id))+' · '+(st?(on?'Online':'Offline'):'…')+'</small></div><button type="button" onclick="open_(book()['+i+'].id)">Connect</button><button type="button" class="x" title="Remove" onclick="rm('+i+')">✕</button></div>'}).join('')}
+function rm(i){var b=book();b.splice(i,1);saveBook(b);poll()}
+function poll(){var b=book();if(!b.length)return draw();fetch('/status?ids='+b.map(function(p){return p.id}).join(',')).then(function(r){return r.json()}).then(draw).catch(function(){draw({})})}
+poll();setInterval(function(){document.hidden||poll()},10000);
 function cp(){var s=document.getElementById('cfg').textContent.trim();(navigator.clipboard?navigator.clipboard.writeText(s):Promise.reject()).catch(function(){var a=document.createElement('textarea');a.value=s;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()}).finally(function(){var t=document.getElementById('t');t.style.display='block';setTimeout(function(){t.style.display='none'},1500)})}
 </script>
 </body>
