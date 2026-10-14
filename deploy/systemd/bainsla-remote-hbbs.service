@@ -1,0 +1,12 @@
+[Unit]
+Description=Bainsla Remote ID server (hbbs)
+After=network.target
+[Service]
+User=bremote
+WorkingDirectory=/opt/bainsla-remote/data
+ExecStart=/opt/bainsla-remote/server/amd64/hbbs -k _ -r 162.35.107.192:21117
+Restart=always
+RestartSec=3
+LimitNOFILE=100000
+[Install]
+WantedBy=multi-user.target
