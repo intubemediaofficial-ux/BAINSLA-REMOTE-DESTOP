@@ -188,7 +188,7 @@ export function createViewer(options = {}) {
     pc.ontrack = (event) => {
       video.srcObject = event.streams[0];
       video.play().catch(() => {});
-      setStatus(`Connected to ${data.hostInfo?.name || 'Desk'}`, true);
+      setStatus(`Connected to ${data.hostInfo?.name || 'Desk'}${permissions.control ? '' : ' · view only'}`, true);
     };
     pc.ondatachannel = ({ channel }) => {
       if (channel.label === 'ctl') {
@@ -214,7 +214,7 @@ export function createViewer(options = {}) {
       if (candidate) socket.emit('signal', { sessionId, data: { candidate: candidate.toJSON() } });
     };
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'connected') setStatus('Connected', true);
+      if (pc.connectionState === 'connected') setStatus(permissions.control ? 'Connected' : 'Connected · view only (shared from a browser)', true);
       if (pc.connectionState === 'failed') {
         setStatus('Connection failed');
         socket.emit('session:end', { sessionId, reason: 'connection_failed' });
