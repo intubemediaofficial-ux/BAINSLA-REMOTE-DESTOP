@@ -145,6 +145,12 @@ if (!supported) {
         session.incoming.received += chunk.byteLength;
       } else session.pendingChunks.push(chunk);
     };
+    const ua = navigator.userAgent;
+    const installLink = /Windows/.test(ua) ? $('download-win') : /Mac OS/.test(ua) ? $('download-mac') : null;
+    const canInstall = installLink && !installLink.hidden && installLink.getAttribute('href') !== '#';
+    $('full-control').hidden = !canInstall;
+    $('full-control-note').hidden = !canInstall;
+    if (canInstall) $('full-control').href = installLink.href;
     $('share-preview').srcObject = session.stream;
     $('live-title').textContent = `Connecting to ${session.viewerName}…`;
     $('share-messages').replaceChildren();

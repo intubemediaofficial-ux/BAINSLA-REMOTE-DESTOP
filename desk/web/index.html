@@ -24,8 +24,8 @@
       <span class="eyebrow">LIVE · SCREEN SHARED</span>
       <h1 id="live-title">Sharing your screen</h1>
       <video id="share-preview" autoplay muted playsinline></video>
-      <div class="share-actions"><label class="button secondary">Send file<input id="share-file" type="file" hidden></label><button id="stop-share" class="button danger" type="button">Stop sharing</button></div>
-      <div class="share-chat"><div id="share-messages" class="chat-messages"></div><form id="share-chat-form"><input id="share-chat-input" placeholder="Message" autocomplete="off" aria-label="Message"><button class="button primary">Send</button></form></div>
+      <div class="share-actions"><label class="button secondary">Send file<input id="share-file" type="file" hidden></label><a id="full-control" class="button primary" href="#" hidden>Give full control: install app</a><button id="stop-share" class="button danger" type="button">Stop sharing</button></div>
+      <p class="share-note" id="full-control-note" hidden>In the browser they can only see your screen. To let them use your mouse and keyboard, install the app, open it and tell them the new ID it shows.</p><div class="share-chat"><div id="share-messages" class="chat-messages"></div><form id="share-chat-form"><input id="share-chat-input" placeholder="Message" autocomplete="off" aria-label="Message"><button class="button primary">Send</button></form></div>
     </section>
     <nav class="home-tabs" aria-label="Sections"><a href="#tiles" class="active">Start</a><a href="#favorites">Favorites</a></nav>
     <section class="tiles" id="tiles">

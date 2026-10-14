@@ -94,7 +94,7 @@ button { cursor: pointer; }
 footer { text-align: center; color: #64748b; font-size: 10px; padding: 22px; }
 
 .viewer-bar { height: 58px; display: flex; align-items: center; gap: 17px; padding: 0 18px; background: #101827; border-bottom: 1px solid var(--line); }
-.viewer-bar.is-hidden { transform: translateY(-100%); }
+
 .viewer-bar .brand { font-size: 16px; flex-shrink: 0; }
 .viewer-bar .brand::before { width: 22px; height: 22px; border-radius: 6px; }
 .status { color: var(--muted); font-size: 11px; margin-right: auto; }
@@ -363,3 +363,29 @@ a.tile:hover { transform: translateY(-2px); box-shadow: 0 14px 34px #0007; }
   .share-card { padding: 22px 16px; }
   .tile { min-height: 130px; }
 }
+
+/* Viewer: use the whole window, zoom in/out */
+body[data-viewer="true"], body.electron-viewer { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+body[data-viewer="true"] .viewer-bar, body.electron-viewer .viewer-bar { flex: none; }
+body[data-viewer="true"] .viewer-layout, body.electron-viewer .viewer-layout { flex: 1; min-height: 0; height: auto; }
+.viewer-tools { flex-wrap: nowrap; }
+.zoom-group { display: inline-flex; }
+.zoom-group button { border-radius: 0; min-width: 34px; }
+.zoom-group button:first-child { border-radius: 8px 0 0 8px; }
+.zoom-group button:last-child { border-radius: 0 8px 8px 0; }
+.zoom-group #zoom-label { min-width: 52px; border-left: 0; border-right: 0; font-variant-numeric: tabular-nums; }
+.remote-stage.is-zoomed { display: block; overflow: auto; }
+.remote-stage.is-zoomed #remote-video { display: block; max-width: none; max-height: none; object-fit: fill; margin: 0 auto; }
+.remote-stage.is-zoomed .viewer-help { display: none; }
+.remote-stage.is-view-only .viewer-help { left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); text-align: center; color: #fde68a; background: #000a; padding: 7px 12px; border-radius: 8px; font-size: 12px; }
+.viewer-tools > * { flex: none; }
+body[data-viewer="true"] .viewer-layout, body.electron-viewer .viewer-layout { position: relative; }
+@media (max-width: 760px) {
+  .viewer-tools { flex: 1 1 100%; order: 3; overflow-x: auto; scrollbar-width: none; }
+  .chat-panel.open { top: 0; }
+}
+#full-control[hidden] { display: none; }
+@media (max-width: 760px) {
+  body[data-viewer="true"] .chat-panel.open, body.electron-viewer .chat-panel.open { position: absolute; right: 0; top: 0; bottom: 0; z-index: 5; width: min(320px, 88vw); }
+}
+.viewer-bar .status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }

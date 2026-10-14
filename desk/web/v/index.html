@@ -17,7 +17,7 @@
       <button id="chat-toggle">Chat</button>
       <label class="button file-button">Send file<input id="file-input" type="file" hidden></label>
       <button id="keyboard-button" class="keyboard-button">⌨</button>
-      <button id="fullscreen-button" title="Fullscreen">⛶</button>
+      <span class="zoom-group" role="group" aria-label="Zoom"><button id="zoom-out" title="Zoom out (Ctrl -)">−</button><button id="zoom-label" title="Fit to window / 100%">Fit</button><button id="zoom-in" title="Zoom in (Ctrl +)">+</button></span><button id="fullscreen-button" title="Fullscreen">⛶</button>
       <button id="disconnect-button" class="button danger">Disconnect</button>
       <span id="connection-stats"></span>
     </div>
@@ -32,7 +32,7 @@
       </div>
       <video id="remote-video" autoplay playsinline tabindex="0" aria-label="Remote desktop"></video>
       <input id="mobile-keyboard" class="mobile-keyboard-input" aria-label="On-screen keyboard input" autocomplete="off">
-      <div class="viewer-help">Click the desktop, then type · Drop files to send</div>
+      <div class="viewer-help">Click the desktop, then type · Ctrl + scroll to zoom · Drop files to send</div>
     </section>
     <aside id="chat-panel" class="chat-panel"><h2>Chat</h2><div id="chat-messages" class="chat-messages"></div><form id="chat-form"><input id="chat-input" placeholder="Message"><button class="button primary">Send</button></form></aside>
   </main>
