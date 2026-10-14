@@ -5,7 +5,7 @@ Built on open-source RustDesk (client), [rustdesk-server](https://github.com/lej
 [rustdesk-api](https://github.com/lejianwen/rustdesk-api) (admin panel, users, devices, logs, web client).
 Everything runs on our own VPS, so there are no time, session or device limits.
 
-Live (temporary until `remote.bainslamusic.com` DNS is added): https://remote.162.35.107.192.sslip.io
+Live: https://remote.bainslamusic.com (the old https://remote.162.35.107.192.sslip.io keeps working)
 
 | URL | What |
 | --- | --- |

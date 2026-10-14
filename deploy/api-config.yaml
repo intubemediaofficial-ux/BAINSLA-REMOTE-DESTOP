@@ -43,12 +43,12 @@ postgresql:
 rustdesk:
   id-server: "162.35.107.192:21116"
   relay-server: "162.35.107.192:21117"
-  api-server: "https://remote.162.35.107.192.sslip.io"
+  api-server: "https://remote.bainslamusic.com"
   key: ""
   key-file: "/opt/bainsla-remote/data/id_ed25519.pub"
   personal: 1
   webclient-magic-queryonline: 0
-  ws-host: "wss://remote.162.35.107.192.sslip.io"  #eg: wss://192.168.1.3:4443
+  ws-host: "wss://remote.bainslamusic.com"  #eg: wss://192.168.1.3:4443
 logger:
   path: "./runtime/log.txt"
   level: "info" #trace,debug,info,warn,error,fatal
