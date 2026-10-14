@@ -1,0 +1,22 @@
+{
+  "name": "kvdesk-server",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.1",
+    "cookie-signature": "^1.2.2",
+    "express": "^4.21.2",
+    "multer": "^2.0.2",
+    "socket.io": "^4.8.1"
+  }
+}

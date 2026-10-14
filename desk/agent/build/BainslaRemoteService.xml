@@ -1,0 +1,12 @@
+<service>
+  <id>BainslaRemoteService</id>
+  <name>Bainsla Remote Service</name>
+  <description>Bainsla Remote unattended access supervisor</description>
+  <executable>%BASE%\..\BainslaRemote.exe</executable>
+  <arguments>--service</arguments>
+  <startmode>Automatic</startmode>
+  <onfailure action="restart" delay="5 sec" />
+  <onfailure action="restart" delay="5 sec" />
+  <onfailure action="restart" delay="5 sec" />
+  <log mode="roll" />
+</service>

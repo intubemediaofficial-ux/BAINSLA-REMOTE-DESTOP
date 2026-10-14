@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bainsla Remote · Unlimited remote desktop</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"></head>
+<body>
+  <header class="site-header"><a class="brand" href="./">Bainsla<span>Remote</span></a><nav><a href="admin/">Admin</a></nav></header>
+  <main class="landing">
+    <section class="hero">
+      <div class="hero-copy"><span class="eyebrow">BAINSLA REMOTE · NO LIMITS</span><h1>Any computer,<br><em>one ID away.</em></h1><p>Install the Bainsla Remote app once, share its 9-digit ID, and control that PC or phone from any browser. Unlimited sessions on our own private server.</p>
+        <div class="connect-box"><label for="desk-id">Remote Desk ID</label><div class="connect-row"><input id="desk-id" inputmode="numeric" placeholder="123 456 789"><button id="connect" class="button primary">Connect <span>→</span></button></div><input id="desk-password" class="password-field" type="password" placeholder="Password (if required)"></div>
+        <div class="download-row"><a id="download-win" class="button secondary" href="#">↓ &nbsp;Download for Windows</a><a id="download-apk" class="button secondary" href="#">↓ &nbsp;Download for Android</a><span class="mac-download"><a id="download-mac" class="button secondary" href="#" hidden>↓ &nbsp;Download for Mac</a><a id="download-mac-intel" class="mac-intel-link text-link" href="#" hidden>Intel Mac</a></span></div>
+      </div>
+      <div class="hero-art"><div class="monitor"><div class="monitor-top"><i></i><i></i><i></i><span>BAINSLA REMOTE · SECURE SESSION</span></div><div class="screen-glow"><div class="screen-card"><div class="screen-dot"></div><div><strong>Connected</strong><small>Desktop · Online</small></div><b>↗</b></div><div class="desktop-lines"><span></span><span></span><span></span></div></div></div><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div></div>
+    </section>
+    <section class="address-book">
+      <div class="address-head"><div><span class="eyebrow">YOUR ADDRESS BOOK</span><h2>Saved desks</h2></div><span id="auto-connect-note" class="muted"></span></div>
+      <form id="saved-desk-form" class="saved-desk-form"><input name="target" placeholder="Desk ID or alias" aria-label="Desk ID or alias" required><input name="label" placeholder="Label" aria-label="Label"><input name="password" type="password" placeholder="Password (saved on this device)" aria-label="Password"><label class="check-label"><input name="autoConnect" type="checkbox"> Auto-connect</label><button class="button primary">Save desk</button></form>
+      <div id="saved-desks" class="saved-desks"></div>
+    </section>
+    <section class="feature-row"><article><span>01</span><div><h2>One ID to connect</h2><p>Enter the 9-digit ID or a name like staff-rajesh and connect.</p></div></article><article><span>02</span><div><h2>Private and secure</h2><p>Encrypted peer-to-peer video through Bainsla's own server. No third party in between.</p></div></article><article><span>03</span><div><h2>24x7 unattended access</h2><p>Set a fixed password once and connect any time, even after a reboot.</p></div></article></section>
+    <p id="announcement" class="announcement"></p>
+  </main>
+  <footer>© <span id="app-name">Bainsla Remote</span> · Self-hosted remote desktop</footer>
+  <script src="app.js"></script>
+</body></html>

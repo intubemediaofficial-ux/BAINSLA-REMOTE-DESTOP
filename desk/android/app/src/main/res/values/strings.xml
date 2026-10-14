@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Bainsla Remote</string>
+    <string name="accessibility_service_name">Bainsla Remote remote control</string>
+    <string name="accessibility_service_description">Lets an authorized Bainsla Remote viewer control this phone during an active session.</string>
+</resources>
