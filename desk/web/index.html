@@ -1,25 +1,53 @@
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bainsla Remote · Unlimited remote desktop</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"></head>
-<body>
-  <header class="site-header"><a class="brand" href="./">Bainsla<span>Remote</span></a><nav><a href="share/">Share my screen</a><a href="admin/">Admin</a></nav></header>
-  <main class="landing">
-    <section class="hero">
-      <div class="hero-copy"><span class="eyebrow">BAINSLA REMOTE · NO LIMITS</span><h1>Any computer,<br><em>one ID away.</em></h1><p>Install the Bainsla Remote app once, share its 9-digit ID, and control that PC or phone from any browser. Unlimited sessions on our own private server.</p>
-        <div class="connect-box"><label for="desk-id">Remote Desk ID</label><div class="connect-row"><input id="desk-id" inputmode="numeric" placeholder="123 456 789"><button id="connect" class="button primary">Connect <span>→</span></button></div><input id="desk-password" class="password-field" type="password" placeholder="Password (if required)"></div>
-        <div class="download-row"><a id="download-win" class="button secondary" href="#">↓ &nbsp;Download for Windows</a><a id="download-apk" class="button secondary" href="#">↓ &nbsp;Download for Android</a><span class="mac-download"><a id="download-mac" class="button secondary" href="#" hidden>↓ &nbsp;Download for Mac</a><a id="download-mac-intel" class="mac-intel-link text-link" href="#" hidden>Intel Mac</a></span></div>
-        <a class="share-link" href="share/"><strong>No app?</strong> Get a code in this browser and share your screen (view only) <span>→</span></a>
-      </div>
-      <div class="hero-art"><div class="monitor"><div class="monitor-top"><i></i><i></i><i></i><span>BAINSLA REMOTE · SECURE SESSION</span></div><div class="screen-glow"><div class="screen-card"><div class="screen-dot"></div><div><strong>Connected</strong><small>Desktop · Online</small></div><b>↗</b></div><div class="desktop-lines"><span></span><span></span><span></span></div></div></div><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div></div>
+<body class="desk-home">
+  <header class="site-header"><a class="brand" href="./">Bainsla<span>Remote</span></a><nav><a href="admin/">Admin</a></nav></header>
+  <main class="home">
+    <section class="remote-bar" aria-label="Connect to another computer">
+      <span class="remote-bar-dot" aria-hidden="true"></span>
+      <input id="desk-id" inputmode="numeric" autocomplete="off" placeholder="Enter Remote Address" aria-label="Remote address (their code or name)">
+      <input id="desk-password" class="remote-bar-password" type="password" autocomplete="off" placeholder="Password (if set)" aria-label="Password (if set)">
+      <button id="connect" class="button primary" type="button">Connect <span>→</span></button>
     </section>
-    <section class="address-book">
-      <div class="address-head"><div><span class="eyebrow">YOUR ADDRESS BOOK</span><h2>Saved desks</h2></div><span id="auto-connect-note" class="muted"></span></div>
+    <p class="remote-strip">Unlimited and free on our own private server · no time limit · no licence</p>
+    <section class="your-address" id="share-ready">
+      <div class="your-address-row">
+        <span class="your-address-label">Your Address</span>
+        <span class="share-code" id="share-code" aria-live="polite">··· ··· ···</span>
+        <button id="copy-code" class="button invite" type="button" disabled>↗ Copy</button>
+      </div>
+      <p class="share-status" id="share-status">Connecting to the server…</p>
+      <p class="share-note">Give this address to the person who will help you. When they connect, you accept here and they see your screen. To let them use the mouse and keyboard too, install the Bainsla Remote app below.</p>
+    </section>
+    <section class="share-card share-live" id="share-live" hidden>
+      <span class="eyebrow">LIVE · SCREEN SHARED</span>
+      <h1 id="live-title">Sharing your screen</h1>
+      <video id="share-preview" autoplay muted playsinline></video>
+      <div class="share-actions"><label class="button secondary">Send file<input id="share-file" type="file" hidden></label><button id="stop-share" class="button danger" type="button">Stop sharing</button></div>
+      <div class="share-chat"><div id="share-messages" class="chat-messages"></div><form id="share-chat-form"><input id="share-chat-input" placeholder="Message" autocomplete="off" aria-label="Message"><button class="button primary">Send</button></form></div>
+    </section>
+    <nav class="home-tabs" aria-label="Sections"><a href="#tiles" class="active">Start</a><a href="#favorites">Favorites</a></nav>
+    <section class="tiles" id="tiles">
+      <a id="download-win" class="tile tile-win" href="#"><strong>Install for Windows</strong><span>Full control: mouse, keyboard, files. Starts with Windows.</span><b>↓</b></a>
+      <a id="download-apk" class="tile tile-android" href="#"><strong>Install for Android</strong><span>Share and control phones with the Bainsla Remote app.</span><b>↓</b></a>
+      <span class="tile tile-mac mac-download"><a id="download-mac" class="tile-mac-link" href="#" hidden><strong>Install for Mac</strong><span>Download the Mac app.</span></a><a id="download-mac-intel" class="mac-intel-link text-link" href="#" hidden>Intel Mac</a></span>
+      <article class="tile tile-how"><strong>How to connect</strong><span>Ask for their address, type it in the bar on top and press Connect. They accept and you are in.</span></article>
+      <article class="tile tile-lock"><strong>24x7 unattended access</strong><span>Set a fixed password in the app once and connect any time, even after a reboot.</span></article>
+    </section>
+    <section class="address-book" id="favorites">
+      <div class="address-head"><div><span class="eyebrow">FAVORITES</span><h2>Saved desks</h2></div><span id="auto-connect-note" class="muted"></span></div>
       <form id="saved-desk-form" class="saved-desk-form"><input name="target" placeholder="Desk ID or alias" aria-label="Desk ID or alias" required><input name="label" placeholder="Label" aria-label="Label"><input name="password" type="password" placeholder="Password (saved on this device)" aria-label="Password"><label class="check-label"><input name="autoConnect" type="checkbox"> Auto-connect</label><button class="button primary">Save desk</button></form>
       <div id="saved-desks" class="saved-desks"></div>
     </section>
-    <section class="feature-row"><article><span>01</span><div><h2>One ID to connect</h2><p>Enter the 9-digit ID or a name like staff-rajesh and connect.</p></div></article><article><span>02</span><div><h2>Private and secure</h2><p>Encrypted peer-to-peer video through Bainsla's own server. No third party in between.</p></div></article><article><span>03</span><div><h2>24x7 unattended access</h2><p>Set a fixed password once and connect any time, even after a reboot.</p></div></article></section>
     <p id="announcement" class="announcement"></p>
   </main>
+  <div class="share-modal" id="share-request" hidden role="dialog" aria-modal="true" aria-labelledby="request-title">
+    <div class="share-modal-card"><h2 id="request-title">Someone wants to see your screen</h2><p id="request-text">Accept only if you know this person.</p><div class="share-actions"><button id="request-deny" class="button secondary" type="button">Deny</button><button id="request-accept" class="button primary" type="button">Accept and choose screen</button></div></div>
+  </div>
+  <div class="toast" id="share-toast" role="status"></div>
   <footer>© <span id="app-name">Bainsla Remote</span> · Self-hosted remote desktop</footer>
+  <script src="socket.io/socket.io.js"></script>
   <script src="app.js"></script>
+  <script src="share.js"></script>
 </body></html>

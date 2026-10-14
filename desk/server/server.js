@@ -296,9 +296,7 @@ app.post('/api/admin/password', requireAdmin, (req, res) => {
 });
 app.get(['/admin', '/admin/'], (_req, res) => res.sendFile(path.join(WEB_DIR, 'admin', 'index.html')));
 app.get(['/v', '/v/'], (_req, res) => res.sendFile(path.join(WEB_DIR, 'v', 'index.html')));
-app.get('/share', (req, res) => (req.originalUrl.split('?')[0].endsWith('/')
-  ? res.sendFile(path.join(WEB_DIR, 'share', 'index.html'))
-  : res.redirect(301, prefixed('/share/'))));
+app.get('/share', (_req, res) => res.redirect(302, prefixed('/')));
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/') || req.path.startsWith('/download/') || req.path.startsWith('/shared/')) return next();
   res.sendFile(path.join(WEB_DIR, 'index.html'), (err) => err && next(err));

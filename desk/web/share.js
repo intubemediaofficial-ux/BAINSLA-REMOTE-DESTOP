@@ -1,4 +1,4 @@
-const base = location.pathname.replace(/\/share\/?$/, '');
+const base = location.pathname.replace(/\/$/, '');
 const $ = (id) => document.getElementById(id);
 const storeKey = 'bainsla-share-device';
 const CHUNK = 16 * 1024;
@@ -11,7 +11,6 @@ let current = null;
 const setStatus = (text, ok = false) => { $('share-status').textContent = text; $('share-status').classList.toggle('is-online', ok); };
 const toast = (text) => { const el = $('share-toast'); el.textContent = text; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000); };
 const formatId = (id) => String(id).replace(/(\d{3})(?=\d)/g, '$1 ');
-$('site-host').textContent = location.host;
 
 function deviceName() {
   const ua = navigator.userAgent;
@@ -22,7 +21,7 @@ function deviceName() {
 
 if (!supported) {
   $('share-code').textContent = '—';
-  setStatus('This browser cannot share its screen. Open this page in Chrome or Edge on a computer, or install the Bainsla Remote app.');
+  setStatus('This browser cannot share its screen. On a phone, install the Bainsla Remote app. You can still connect to others from the bar on top.');
 } else {
   const socket = io({ path: `${base}/socket.io`, reconnection: true });
   const hello = () => {
@@ -42,7 +41,7 @@ if (!supported) {
       }
       $('share-code').textContent = formatId(ack.id);
       $('copy-code').disabled = false;
-      setStatus('Ready. Keep this page open.', true);
+      setStatus('Ready. Keep this page open while someone connects to you.', true);
     });
   };
   socket.on('connect', hello);
