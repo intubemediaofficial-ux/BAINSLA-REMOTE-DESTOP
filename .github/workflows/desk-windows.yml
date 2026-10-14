@@ -1,0 +1,34 @@
+name: Bainsla Remote Windows app
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ['desk/agent/**', 'desk/shared/**', 'desk/web/style.css', '.github/workflows/desk-windows.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build installer
+        working-directory: desk/agent
+        run: |
+          npm ci
+          npm run dist:win -- --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bainsla-remote-windows
+          path: desk/agent/release/*.exe
+      - name: Publish to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view desk-latest >/dev/null 2>&1 || gh release create desk-latest --title "Bainsla Remote app (latest build)" --notes "Automatic build" --prerelease --target "$GITHUB_SHA"
+          gh release upload desk-latest desk/agent/release/*.exe --clobber

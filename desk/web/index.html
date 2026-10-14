@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bainsla Remote · Remote desktop</title><link rel="stylesheet" href="style.css"></head>
+<body>
+  <header class="site-header"><a class="brand" href="./">Bainsla<span>Remote</span></a><nav><a href="admin/">Admin</a></nav></header>
+  <main class="landing">
+    <section class="hero">
+      <div class="hero-copy"><span class="eyebrow">YOUR DESK, ANYWHERE</span><h1>Remote work,<br><em>without limits.</em></h1><p>Fast, private remote access to your computers. Connect from a browser or Bainsla Remote app.</p>
+        <div class="connect-box"><label for="desk-id">Remote Desk ID</label><div class="connect-row"><input id="desk-id" inputmode="numeric" placeholder="123 456 789"><button id="connect" class="button primary">Connect <span>→</span></button></div><input id="desk-password" class="password-field" type="password" placeholder="Password (if required)"></div>
+        <div class="download-row"><a id="download-win" class="button secondary" href="#">↓ &nbsp;Download for Windows</a><a id="download-apk" class="button secondary" href="#">↓ &nbsp;Download for Android</a><span class="mac-download"><a id="download-mac" class="button secondary" href="#" hidden>↓ &nbsp;Download for Mac</a><a id="download-mac-intel" class="mac-intel-link text-link" href="#" hidden>Intel Mac</a></span></div>
+      </div>
+      <div class="hero-art"><div class="monitor"><div class="monitor-top"><i></i><i></i><i></i><span>BAINSLA REMOTE · SECURE SESSION</span></div><div class="screen-glow"><div class="screen-card"><div class="screen-dot"></div><div><strong>Connected</strong><small>Desktop · Online</small></div><b>↗</b></div><div class="desktop-lines"><span></span><span></span><span></span></div></div></div><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div></div>
+    </section>
+    <section class="address-book">
+      <div class="address-head"><div><span class="eyebrow">YOUR ADDRESS BOOK</span><h2>Saved desks</h2></div><span id="auto-connect-note" class="muted"></span></div>
+      <form id="saved-desk-form" class="saved-desk-form"><input name="target" placeholder="Desk ID or alias" aria-label="Desk ID or alias" required><input name="label" placeholder="Label" aria-label="Label"><input name="password" type="password" placeholder="Password (saved on this device)" aria-label="Password"><label class="check-label"><input name="autoConnect" type="checkbox"> Auto-connect</label><button class="button primary">Save desk</button></form>
+      <div id="saved-desks" class="saved-desks"></div>
+    </section>
+    <section class="feature-row"><article><span>01</span><div><h2>Quick connections</h2><p>Connect to a device with a simple Desk ID.</p></div></article><article><span>02</span><div><h2>Private by design</h2><p>Your desktop media stays peer-to-peer.</p></div></article><article><span>03</span><div><h2>Stay in control</h2><p>Accept requests or use unattended access.</p></div></article></section>
+    <p id="announcement" class="announcement"></p>
+  </main>
+  <footer>© <span id="app-name">Bainsla Remote</span> · Self-hosted remote desktop</footer>
+  <script src="app.js"></script>
+</body></html>
