@@ -288,3 +288,9 @@ th { font-size: 12px; }
   .saved-desk-form { grid-template-columns: 1fr; }
   .site-header nav a { padding: 6px 12px; font-size: 13px; }
 }
+.hero { overflow-x: clip; }
+@media (max-width: 760px) {
+  .download-row { flex-wrap: wrap; }
+  .download-row .button, .download-row .mac-download { flex: 1 1 100%; justify-content: center; }
+  .download-row .mac-download .button { flex: 1 1 0; }
+}
