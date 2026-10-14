@@ -29,6 +29,54 @@ export function createViewer(options = {}) {
   let pendingSessionEvents = [];
   let connectPassword = '';
   let quality = 'auto';
+  let zoom = 0;
+  let pinchStart = null;
+  const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+  const stage = video?.closest('.remote-stage');
+  const fitScale = () => {
+    const width = video?.videoWidth;
+    const height = video?.videoHeight;
+    if (!width || !height || !stage) return 1;
+    return Math.min(stage.clientWidth / width, stage.clientHeight / height);
+  };
+  const currentScale = () => zoom || fitScale();
+  const applyZoom = (next, anchor) => {
+    if (!video || !stage) return;
+    const before = currentScale();
+    const rect = stage.getBoundingClientRect();
+    const anchorX = anchor ? anchor.x - rect.left : stage.clientWidth / 2;
+    const anchorY = anchor ? anchor.y - rect.top : stage.clientHeight / 2;
+    const contentX = (stage.scrollLeft + anchorX) / before;
+    const contentY = (stage.scrollTop + anchorY) / before;
+    zoom = next && Math.abs(next - fitScale()) > 0.01 ? Math.min(4, Math.max(0.1, next)) : 0;
+    const label = q('#zoom-label');
+    if (label) label.textContent = zoom ? `${Math.round(zoom * 100)}%` : 'Fit';
+    if (!zoom) {
+      stage.classList.remove('is-zoomed');
+      video.style.width = '';
+      video.style.height = '';
+      return;
+    }
+    stage.classList.add('is-zoomed');
+    video.style.width = `${Math.round(video.videoWidth * zoom)}px`;
+    video.style.height = `${Math.round(video.videoHeight * zoom)}px`;
+    stage.scrollLeft = contentX * zoom - anchorX;
+    stage.scrollTop = contentY * zoom - anchorY;
+  };
+  const zoomStep = (direction, anchor) => {
+    const scale = currentScale();
+    const next = direction > 0
+      ? ZOOM_STEPS.find((step) => step > scale + 0.01) ?? ZOOM_STEPS.at(-1)
+      : [...ZOOM_STEPS].reverse().find((step) => step < scale - 0.01) ?? ZOOM_STEPS[0];
+    applyZoom(next, anchor);
+  };
+  const showViewOnly = () => {
+    const help = q('.viewer-help');
+    if (help) help.textContent = permissions.control
+      ? 'Click the desktop, then type · Ctrl + scroll to zoom · Drop files to send'
+      : 'View only: this screen is shared from a browser. For mouse and keyboard control, they need the Bainsla Remote app.';
+    q('.remote-stage')?.classList.toggle('is-view-only', !permissions.control);
+  };
 
   const setStatus = (text, connected = false) => {
     if (!status) return;
@@ -52,6 +100,8 @@ export function createViewer(options = {}) {
     pendingSessionEvents = [];
     pendingIceCandidates = [];
     pendingFileChunks = [];
+    if (video) video.srcObject = null;
+    if (reason === 'viewer_closed') setStatus('Disconnected');
   };
   const actualPoint = (event) => {
     const rect = video.getBoundingClientRect();
@@ -124,6 +174,7 @@ export function createViewer(options = {}) {
       setStatus('Text copied from host', true);
     } else if (message.t === 'perm') {
       permissions = { control: message.control, clipboard: message.clipboard, files: message.files };
+      showViewOnly();
     } else if (message.t === 'fs') {
       receiving = { id: message.id, name: message.name, size: message.size, chunks: pendingFileChunks, received: pendingFileChunks.reduce((sum, chunk) => sum + chunk.byteLength, 0) };
       pendingFileChunks = [];
@@ -179,6 +230,7 @@ export function createViewer(options = {}) {
   };
   const setupPeer = async (data) => {
     permissions = data.permissions || permissions;
+    showViewOnly();
     const forceRelay = new URLSearchParams(location.search).get('relay') === '1';
     pc = new RTCPeerConnection({
       iceServers: data.iceServers || [],
@@ -320,7 +372,16 @@ export function createViewer(options = {}) {
   q('#disconnect-button')?.addEventListener('click', () => closeSession());
   q('#quality-select')?.addEventListener('change', (event) => setQuality(event.target.value));
   q('#screen-select')?.addEventListener('change', (event) => sendCtl({ t: 'screen', id: event.target.value }));
-  q('#fullscreen-button')?.addEventListener('click', () => document.documentElement.requestFullscreen?.());
+  q('#fullscreen-button')?.addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.();
+  });
+  q('#zoom-in')?.addEventListener('click', () => zoomStep(1));
+  q('#zoom-out')?.addEventListener('click', () => zoomStep(-1));
+  q('#zoom-label')?.addEventListener('click', () => applyZoom(zoom ? 0 : 1));
+  window.addEventListener('resize', () => { if (zoom) applyZoom(zoom); });
+  video?.addEventListener('loadedmetadata', () => applyZoom(zoom));
+  video?.addEventListener('resize', () => applyZoom(zoom));
   q('#shortcut-select')?.addEventListener('change', (event) => {
     if (event.target.value) sendCtl({ t: 'combo', k: event.target.value });
     event.target.value = '';
@@ -380,9 +441,17 @@ export function createViewer(options = {}) {
   video?.addEventListener('contextmenu', (event) => event.preventDefault());
   video?.addEventListener('wheel', (event) => {
     event.preventDefault();
+    if (event.ctrlKey || event.metaKey) return zoomStep(event.deltaY < 0 ? 1 : -1, { x: event.clientX, y: event.clientY });
+    if (!permissions.control) return;
     sendCtl({ t: 'wh', dx: event.deltaX, dy: event.deltaY });
   }, { passive: false });
   video?.addEventListener('keydown', (event) => {
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && ['Equal', 'NumpadAdd', 'Minus', 'NumpadSubtract', 'Digit0', 'Numpad0'].includes(event.code)) {
+      event.preventDefault();
+      if (event.code === 'Digit0' || event.code === 'Numpad0') applyZoom(0);
+      else zoomStep(['Equal', 'NumpadAdd'].includes(event.code) ? 1 : -1);
+      return;
+    }
     if (!permissions.control) return;
     event.preventDefault();
     sendCtl({ t: 'kd', code: event.code, key: event.key });
@@ -402,7 +471,7 @@ export function createViewer(options = {}) {
       touchStartPoint = point;
       if (point && permissions.control) sendCtl({ t: 'mm', ...point });
       touchTimer = setTimeout(() => {
-        if (!touchMoved) {
+        if (!touchMoved && permissions.control) {
           longPressed = true;
           sendCtl({ t: 'md', b: 2 });
         }
@@ -414,6 +483,7 @@ export function createViewer(options = {}) {
         x: (event.touches[0].clientX + event.touches[1].clientX) / 2,
         y: (event.touches[0].clientY + event.touches[1].clientY) / 2
       };
+      pinchStart = { distance: Math.hypot(event.touches[0].clientX - event.touches[1].clientX, event.touches[0].clientY - event.touches[1].clientY), scale: currentScale(), pinching: false };
     }
   }, { passive: true });
   video?.addEventListener('touchmove', (event) => {
@@ -435,7 +505,11 @@ export function createViewer(options = {}) {
         x: (event.touches[0].clientX + event.touches[1].clientX) / 2,
         y: (event.touches[0].clientY + event.touches[1].clientY) / 2
       };
-      if (lastTouchCentroid) sendCtl({ t: 'wh', dx: lastTouchCentroid.x - centroid.x, dy: lastTouchCentroid.y - centroid.y });
+      const distance = Math.hypot(event.touches[0].clientX - event.touches[1].clientX, event.touches[0].clientY - event.touches[1].clientY);
+      if (pinchStart && (pinchStart.pinching || Math.abs(distance / pinchStart.distance - 1) > 0.12)) {
+        pinchStart.pinching = true;
+        applyZoom(pinchStart.scale * distance / pinchStart.distance, { x: centroid.x, y: centroid.y });
+      } else if (lastTouchCentroid && permissions.control) sendCtl({ t: 'wh', dx: lastTouchCentroid.x - centroid.x, dy: lastTouchCentroid.y - centroid.y });
       lastTouchCentroid = centroid;
     }
   }, { passive: true });
@@ -443,7 +517,7 @@ export function createViewer(options = {}) {
     clearTimeout(touchTimer);
     if (longPressed) sendCtl({ t: 'mu', b: 2 });
     else if (dragStarted) sendCtl({ t: 'mu', b: 0 });
-    else if (event.changedTouches.length && !touchMoved) {
+    else if (event.changedTouches.length && !touchMoved && permissions.control && !pinchStart) {
       sendCtl({ t: 'md', b: 0 });
       sendCtl({ t: 'mu', b: 0 });
     }
@@ -451,21 +525,13 @@ export function createViewer(options = {}) {
     dragStarted = false;
     touchStartPoint = null;
     lastTouchCentroid = null;
+    pinchStart = null;
   });
   video?.addEventListener('dragover', (event) => event.preventDefault());
   video?.addEventListener('drop', (event) => {
     event.preventDefault();
     if (event.dataTransfer.files[0]) sendFile(event.dataTransfer.files[0]);
   });
-  const toolbar = q('.viewer-bar');
-  let hideTimer;
-  const showToolbar = () => {
-    toolbar?.classList.remove('is-hidden');
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => toolbar?.classList.add('is-hidden'), 2500);
-  };
-  document.addEventListener('pointermove', showToolbar);
-  toolbar?.addEventListener('pointerenter', () => toolbar.classList.remove('is-hidden'));
   setInterval(async () => {
     if (!pc || !status) return;
     const stats = await pc.getStats().catch(() => null);
@@ -490,7 +556,7 @@ export function createViewer(options = {}) {
   }, 3000);
   window.addEventListener('beforeunload', () => closeSession());
   if (options.autoConnect !== false && new URLSearchParams(location.search).has('id') && socket.connected) connect();
-  return { socket, connect, close: closeSession, get sessionId() { return sessionId; }, get quality() { return quality; } };
+  return { socket, connect, close: closeSession, zoom: applyZoom, get sessionId() { return sessionId; }, get quality() { return quality; }, get zoomLevel() { return zoom; } };
 }
 
 if (typeof document !== 'undefined' && document.body?.dataset.viewer === 'true') createViewer();

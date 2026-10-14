@@ -736,7 +736,7 @@ function registerIpc() {
 }
 function nutKey(Key, code) {
   const map = {
-    Enter: 'Enter', Escape: 'Escape', Tab: 'Tab', Backspace: 'Backspace', Delete: 'Delete',
+    Enter: 'Return', NumpadEnter: 'Enter', Insert: 'Insert', Escape: 'Escape', Tab: 'Tab', Backspace: 'Backspace', Delete: 'Delete',
     Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', Space: 'Space',
     ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right',
     ShiftLeft: 'LeftShift', ShiftRight: 'RightShift', ControlLeft: 'LeftControl', ControlRight: 'RightControl',
