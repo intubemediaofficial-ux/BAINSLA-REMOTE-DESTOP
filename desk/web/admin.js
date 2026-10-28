@@ -12,12 +12,49 @@ const request = async (route, options = {}) => {
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const time = (value) => value ? new Date(value).toLocaleString() : '—';
 function renderLogin(message = '') {
-  root.innerHTML = `<main class="login-wrap"><div class="login-card"><a class="brand" href="${base}/">Bainsla<span>Remote</span></a><h1>Admin sign in</h1><p>Manage devices and sessions.</p><form id="login-form"><label>Email<input name="email" type="email" value="intubemediaofficial@gmail.com" required></label><label>Password<input name="password" type="password" required autofocus></label><button class="button primary">Sign in</button><div class="form-error">${esc(message)}</div></form></div></main>`;
+  root.innerHTML = `<main class="login-wrap"><div class="login-card"><a class="brand" href="${base}/">Bainsla<span>Remote</span></a><h1>Admin sign in</h1><p>Manage devices and sessions.</p><form id="login-form"><label>Email<input name="email" type="email" value="intubemediaofficial@gmail.com" required></label><label>Password<input name="password" type="password" required autofocus></label><button class="button primary">Sign in</button><div class="form-error">${esc(message)}</div><button type="button" id="forgot-link" class="link-button">Forgot password?</button></form></div></main>`;
+  root.querySelector('#forgot-link').onclick = () => renderForgot();
   root.querySelector('#login-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget));
     try { await request('/api/admin/login', { method: 'POST', body: JSON.stringify(values) }); renderAdmin(); }
     catch { renderLogin('Email or password is incorrect.'); }
+  });
+}
+const resetErrors = {
+  wait: 'Please wait a minute before asking for a new code.',
+  too_many: 'Too many codes requested. Try again in an hour.',
+  mail_failed: 'Could not send the email. Try again in a few minutes.',
+  invalid_code: 'The code is wrong or has expired.',
+  password_too_short: 'New password must be at least 8 characters.'
+};
+function renderForgot(step = 'email', email = 'intubemediaofficial@gmail.com', message = '') {
+  const fields = step === 'email'
+    ? `<label>Admin email<input name="email" type="email" value="${esc(email)}" required></label><button class="button primary">Send reset code</button>`
+    : `<label>6-digit code from your email<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required autofocus></label><label>New password<input name="password" type="password" minlength="8" autocomplete="new-password" required></label><label>Confirm new password<input name="confirm" type="password" minlength="8" autocomplete="new-password" required></label><button class="button primary">Set new password</button>`;
+  const intro = step === 'email' ? 'We will email a 6-digit code to the admin email.' : `Code sent to ${esc(email)}. It expires in 10 minutes.`;
+  root.innerHTML = `<main class="login-wrap"><div class="login-card"><a class="brand" href="${base}/">Bainsla<span>Remote</span></a><h1>Reset password</h1><p>${intro}</p><form id="forgot-form">${fields}<div class="form-error">${esc(message)}</div>${step === 'code' ? '<button type="button" id="resend-link" class="link-button">Send a new code</button>' : ''}<button type="button" id="back-link" class="link-button">Back to sign in</button></form></div></main>`;
+  root.querySelector('#back-link').onclick = () => renderLogin();
+  const resend = root.querySelector('#resend-link');
+  if (resend) resend.onclick = () => renderForgot('email', email);
+  root.querySelector('#forgot-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(event.currentTarget));
+    const button = event.currentTarget.querySelector('.button');
+    button.disabled = true;
+    try {
+      if (step === 'email') {
+        await request('/api/admin/forgot', { method: 'POST', body: JSON.stringify({ email: values.email }) });
+        renderForgot('code', values.email);
+      } else {
+        if (values.password !== values.confirm) { button.disabled = false; event.currentTarget.querySelector('.form-error').textContent = 'The two passwords do not match.'; return; }
+        await request('/api/admin/reset', { method: 'POST', body: JSON.stringify({ email, code: values.code, password: values.password }) });
+        renderLogin('Password updated. Sign in with your new password.');
+      }
+    } catch (error) {
+      button.disabled = false;
+      event.currentTarget.querySelector('.form-error').textContent = resetErrors[error.message] || 'Something went wrong. Try again.';
+    }
   });
 }
 function shell() {
@@ -92,8 +129,14 @@ async function renderSettings(container) {
   };
   container.querySelector('#password-form').onsubmit = async (event) => {
     event.preventDefault();
-    await request('/api/admin/password', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))) });
-    alert('Password updated');
+    const form = event.currentTarget;
+    try {
+      await request('/api/admin/password', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(form))) });
+      form.reset();
+      alert('Password updated');
+    } catch (error) {
+      alert(error.message === 'invalid_password' ? 'Current password is incorrect.' : error.message === 'password_too_short' ? 'New password must be at least 8 characters.' : 'Could not update the password.');
+    }
   };
 }
 const pages = { dashboard: renderDashboard, devices: renderDevices, sessions: renderSessions, settings: renderSettings };

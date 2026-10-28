@@ -292,6 +292,59 @@ app.post('/api/admin/settings/upload/:kind', requireAdmin, (req, res, next) => {
   settingsSet.run(key, req.file.filename);
   res.json({ ok: true, file: req.file.filename });
 });
+const resetCodes = new Map();
+const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex');
+async function sendAdminMail(to, subject, html) {
+  if (!process.env.BREVO_API_KEY) throw new Error('mail_not_configured');
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({
+      sender: { name: 'Bainsla Remote', email: process.env.MAIL_FROM || ADMIN_EMAIL },
+      to: [{ email: to }], subject, htmlContent: html
+    })
+  });
+  if (!response.ok) throw new Error(`mail_failed_${response.status}`);
+}
+app.post('/api/admin/forgot', async (req, res) => {
+  const email = String(req.body?.email || '').toLowerCase().trim();
+  const admin = db.prepare('SELECT email FROM admins WHERE email = ?').get(email);
+  if (!admin) return res.json({ ok: true });
+  const now = Date.now();
+  const previous = resetCodes.get(email);
+  if (previous && now - previous.sentAt < 60 * 1000) return res.status(429).json({ error: 'wait' });
+  const hourStart = previous && now - previous.hourStart < 3600 * 1000 ? previous.hourStart : now;
+  const sentThisHour = hourStart === now ? 1 : previous.sentThisHour + 1;
+  if (sentThisHour > 5) return res.status(429).json({ error: 'too_many' });
+  const code = String(crypto.randomInt(100000, 1000000));
+  resetCodes.set(email, { hash: sha256(code), expiresAt: now + 10 * 60 * 1000, sentAt: now, hourStart, sentThisHour, tries: 0 });
+  try {
+    await sendAdminMail(email, 'Bainsla Remote admin password reset code',
+      `<div style="font-family:Arial,sans-serif;font-size:15px;color:#172033"><p>Your Bainsla Remote admin password reset code is:</p><p style="font-size:30px;font-weight:700;letter-spacing:6px">${code}</p><p>It expires in 10 minutes. If you did not ask for this, ignore this email; your password stays the same.</p></div>`);
+    res.json({ ok: true });
+  } catch (error) {
+    resetCodes.delete(email);
+    console.error('admin reset mail', error.message);
+    res.status(502).json({ error: 'mail_failed' });
+  }
+});
+app.post('/api/admin/reset', (req, res) => {
+  const email = String(req.body?.email || '').toLowerCase().trim();
+  const code = String(req.body?.code || '').trim();
+  const password = String(req.body?.password || '');
+  if (password.length < 8) return res.status(400).json({ error: 'password_too_short' });
+  const entry = resetCodes.get(email);
+  if (!entry || !entry.hash || entry.expiresAt <= Date.now()) return res.status(400).json({ error: 'invalid_code' });
+  entry.tries += 1;
+  if (!crypto.timingSafeEqual(Buffer.from(sha256(code)), Buffer.from(entry.hash))) {
+    if (entry.tries >= 5) entry.hash = '';
+    return res.status(400).json({ error: 'invalid_code' });
+  }
+  resetCodes.delete(email);
+  db.prepare('UPDATE admins SET pw_hash = ? WHERE email = ?').run(bcrypt.hashSync(password, 12), email);
+  db.prepare('DELETE FROM admin_sessions WHERE email = ?').run(email);
+  res.json({ ok: true });
+});
 app.post('/api/admin/password', requireAdmin, (req, res) => {
   const oldPassword = String(req.body?.oldPassword || '');
   const password = String(req.body?.password || '');
