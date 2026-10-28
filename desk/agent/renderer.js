@@ -432,6 +432,35 @@ window.kv.getConfig().then((config) => {
   if (!config.id) connect();
 });
 $('settings-close').onclick = () => $('settings-panel').hidden = true;
+const renderUpdate = (info = {}) => {
+  const bar = $('update-bar');
+  const text = $('update-text');
+  const button = $('update-button');
+  if (info.version && info.state === 'latest') $('app-version').textContent = `Version ${info.version} · up to date`;
+  const show = ['available', 'downloading', 'installing', 'error'].includes(info.state);
+  bar.hidden = !show;
+  if (!show) return;
+  button.hidden = !['available', 'error'].includes(info.state);
+  button.textContent = info.state === 'error' ? 'Try again' : 'Update now';
+  text.textContent = info.state === 'available' ? `New version ${info.version} is available`
+    : info.state === 'downloading' ? `Downloading update ${info.version || ''}… ${info.percent || 0}%`
+    : info.state === 'installing' ? 'Installing update… the app will reopen by itself'
+    : info.message || 'Update failed';
+};
+window.kv.onUpdateState(renderUpdate);
+window.kv.getVersion().then((info) => { $('app-version').textContent = `Version ${info.version}`; renderUpdate(info); }).catch(() => {});
+$('update-button').onclick = async () => {
+  const current = await window.kv.getVersion();
+  if (current.state === 'error') return renderUpdate(await window.kv.checkUpdate());
+  renderUpdate(await window.kv.installUpdate());
+};
+$('check-update').onclick = async () => {
+  $('app-version').textContent = 'Checking for updates…';
+  const info = await window.kv.checkUpdate();
+  if (info.state === 'unsupported') $('app-version').textContent = 'Updates are available in the installed Windows app';
+  else if (info.state === 'available') $('app-version').textContent = `New version ${info.version} available`;
+  renderUpdate(info);
+};
 $('quit-app').onclick = () => { if (confirm('Stop Bainsla Remote? Remote access will be off until you open the app again.')) window.kv.quit(); };
 async function refreshPermissions() {
   const status = await window.kv.getPermissions();

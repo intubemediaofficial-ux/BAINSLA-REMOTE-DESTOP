@@ -52,5 +52,9 @@ contextBridge.exposeInMainWorld('kv', {
   sendActiveChat: (sessionId, text) => ipcRenderer.send('active:send-chat', { sessionId, text }),
   sendActiveFile: (sessionId) => ipcRenderer.send('active:send-file', sessionId),
   openActiveChat: (sessionId) => ipcRenderer.send('active:chat-open', sessionId),
-  quit: () => ipcRenderer.send('agent:quit')
+  quit: () => ipcRenderer.send('agent:quit'),
+  getVersion: () => ipcRenderer.invoke('update:version'),
+  checkUpdate: () => ipcRenderer.invoke('update:check'),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
+  onUpdateState: (fn) => ipcRenderer.on('update-state', (_event, data) => fn(data))
 });

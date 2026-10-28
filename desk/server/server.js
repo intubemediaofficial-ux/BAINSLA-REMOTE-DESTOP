@@ -81,6 +81,13 @@ app.use('/download', express.static(DOWNLOADS_DIR, {
     }
   }
 }));
+app.use('/update', express.static(path.join(DOWNLOADS_DIR, 'update'), {
+  fallthrough: false,
+  index: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.yml')) res.setHeader('Cache-Control', 'no-cache');
+  }
+}));
 app.use('/shared', express.static(SHARED_DIR, { fallthrough: false }));
 app.use(express.static(WEB_DIR, { index: false, fallthrough: true }));
 
@@ -298,7 +305,7 @@ app.get(['/admin', '/admin/'], (_req, res) => res.sendFile(path.join(WEB_DIR, 'a
 app.get(['/v', '/v/'], (_req, res) => res.sendFile(path.join(WEB_DIR, 'v', 'index.html')));
 app.get('/share', (_req, res) => res.redirect(302, prefixed('/')));
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api/') || req.path.startsWith('/download/') || req.path.startsWith('/shared/')) return next();
+  if (req.path.startsWith('/api/') || req.path.startsWith('/download/') || req.path.startsWith('/update/') || req.path.startsWith('/shared/')) return next();
   res.sendFile(path.join(WEB_DIR, 'index.html'), (err) => err && next(err));
 });
 app.use((err, _req, res, _next) => {

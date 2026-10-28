@@ -1,6 +1,6 @@
 {
   "name": "kv-desk",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "private": true,
   "description": "Bainsla Remote remote desktop host and viewer",
   "main": "main.js",
@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@nut-tree-fork/nut-js": "^4.2.6",
+    "electron-updater": "^6.8.11",
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
@@ -86,6 +87,12 @@
       "target": "AppImage",
       "icon": "build/icon.png",
       "category": "Network"
-    }
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://remote.bainslamusic.com/update"
+      }
+    ]
   }
 }
