@@ -448,7 +448,7 @@ const renderUpdate = (info = {}) => {
     : info.message || 'Update failed';
 };
 window.kv.onUpdateState(renderUpdate);
-window.kv.getVersion().then((info) => { $('app-version').textContent = `Version ${info.version}`; renderUpdate(info); }).catch(() => {});
+window.kv.getVersion().then((info) => { $('app-version').textContent = `Version ${info.installedVersion}`; renderUpdate(info); }).catch(() => {});
 $('update-button').onclick = async () => {
   const current = await window.kv.getVersion();
   if (current.state === 'error') return renderUpdate(await window.kv.checkUpdate());

@@ -782,7 +782,7 @@ function registerIpc() {
   });
   ipcMain.on('active:disconnect', (_event, sessionId) => disconnectHostSession(sessionId));
   ipcMain.on('agent:quit', () => { quitting = true; app.quit(); });
-  ipcMain.handle('update:version', () => ({ version: app.getVersion(), ...updateState }));
+  ipcMain.handle('update:version', () => ({ ...updateState, installedVersion: app.getVersion() }));
   ipcMain.handle('update:check', () => checkForUpdate());
   ipcMain.handle('update:install', async () => {
     const instance = getUpdater();
