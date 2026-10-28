@@ -1,6 +1,6 @@
 {
   "name": "kv-desk",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": true,
   "description": "Bainsla Remote remote desktop host and viewer",
   "main": "main.js",

@@ -202,7 +202,17 @@ function openViewer(target, password = '') {
   viewer.on('closed', () => viewerWindows.delete(key));
   return viewer;
 }
+function destroyTray() {
+  if (tray && !tray.isDestroyed()) { tray.destroy(); }
+  tray = null;
+}
+function ensureTray() {
+  if (readConfig().hidden) { destroyTray(); return; }
+  if (tray && !tray.isDestroyed()) { updateTray(); return; }
+  createTray();
+}
 function createTray() {
+  if (readConfig().hidden) { destroyTray(); return; }
   let icon;
   if (mac.IS_MAC) {
     // Template image: macOS tints it for light and dark menu bars; @2x is picked up for Retina.
@@ -559,6 +569,7 @@ function registerIpc() {
   ipcMain.handle('config:save', (_event, patch) => {
     const previous = readConfig();
     const next = saveConfig({ ...previous, ...patch });
+    if ('hidden' in patch) ensureTray();
     if (!mac.IS_MAC || 'autostart' in patch) applyAutostart(next.autostart);
     if (hostSocket && patch.serverUrl && serverRoot(patch.serverUrl) !== serverRoot(previous.serverUrl)) connectHost('config:save serverUrl changed');
     if (hostSocket && patch.deviceName) hostSocket.emit('agent:update', { name: next.deviceName });
