@@ -74,6 +74,7 @@ function showConfig(config) {
   $('allow-control').checked = Boolean(config.allowControl);
   $('allow-clipboard').checked = Boolean(config.allowClipboard);
   $('allow-files').checked = Boolean(config.allowFiles);
+  $('hidden-mode').checked = Boolean(config.hidden);
   if (!config.id) setStatus('Offline');
   renderRecent();
 }
@@ -346,7 +347,7 @@ $('save-settings').onclick = async () => {
     const updated = await window.kv.saveConfig({
       serverUrl, deviceName: $('settings-name').value.trim(), autostart: $('autostart').checked,
       allowControl: $('allow-control').checked, allowClipboard: $('allow-clipboard').checked,
-      allowFiles: $('allow-files').checked
+      allowFiles: $('allow-files').checked, hidden: $('hidden-mode').checked
     });
     showConfig(updated);
     $('settings-panel').hidden = true;
@@ -418,6 +419,7 @@ window.kv.getConfig().then((config) => {
   $('allow-control').checked = config.allowControl !== false;
   $('allow-clipboard').checked = config.allowClipboard !== false;
   $('allow-files').checked = config.allowFiles !== false;
+  $('hidden-mode').checked = config.hidden === true;
   window.kv.getBook().then((book) => {
     state.book = book;
     pollAddressBook();
