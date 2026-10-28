@@ -162,6 +162,44 @@ function endAllHostSessions(reason = 'disconnect') {
   updateHostSessions();
   for (const sessionId of sessionIds) sendToMain('session-kill', { sessionId, reason });
 }
+let updater = null;
+let updateState = { state: 'idle' };
+function setUpdateState(next) {
+  updateState = next;
+  sendToMain('update-state', updateState);
+}
+function getUpdater() {
+  if (updater || !app.isPackaged || process.platform !== 'win32') return updater;
+  try {
+    ({ autoUpdater: updater } = require('electron-updater'));
+  } catch (error) {
+    logEvent(`updater unavailable ${safeLogText(error.message)}`);
+    return null;
+  }
+  updater.autoDownload = false;
+  updater.autoInstallOnAppQuit = false;
+  updater.on('update-available', (info) => setUpdateState({ state: 'available', version: info.version }));
+  updater.on('update-not-available', () => setUpdateState({ state: 'latest', version: app.getVersion() }));
+  updater.on('download-progress', (progress) => setUpdateState({ state: 'downloading', version: updateState.version, percent: Math.round(progress.percent || 0) }));
+  updater.on('update-downloaded', (info) => {
+    setUpdateState({ state: 'installing', version: info.version });
+    logEvent(`update install version=${safeLogText(info.version)}`);
+    quitting = true;
+    setTimeout(() => updater.quitAndInstall(true, true), 500);
+  });
+  updater.on('error', (error) => {
+    logEvent(`update error ${safeLogText(error?.message || String(error))}`);
+    setUpdateState({ state: 'error', version: updateState.version, message: 'Update failed. Check your internet and try again.' });
+  });
+  return updater;
+}
+async function checkForUpdate() {
+  const instance = getUpdater();
+  if (!instance) return { state: 'unsupported' };
+  if (['downloading', 'installing'].includes(updateState.state)) return updateState;
+  try { await instance.checkForUpdates(); } catch { /* reported via error event */ }
+  return updateState;
+}
 function createMainWindow(hidden = false) {
   mainWindow = new BrowserWindow({
     width: 900, height: 600, minWidth: 720, minHeight: 500, show: !hidden,
@@ -744,6 +782,15 @@ function registerIpc() {
   });
   ipcMain.on('active:disconnect', (_event, sessionId) => disconnectHostSession(sessionId));
   ipcMain.on('agent:quit', () => { quitting = true; app.quit(); });
+  ipcMain.handle('update:version', () => ({ version: app.getVersion(), ...updateState }));
+  ipcMain.handle('update:check', () => checkForUpdate());
+  ipcMain.handle('update:install', async () => {
+    const instance = getUpdater();
+    if (!instance || updateState.state !== 'available') return updateState;
+    setUpdateState({ state: 'downloading', version: updateState.version, percent: 0 });
+    instance.downloadUpdate().catch(() => {});
+    return updateState;
+  });
 }
 function nutKey(Key, code) {
   const map = {
@@ -825,6 +872,8 @@ else {
       mac.promptMacPermissions();
     } else if (!SESSION_AGENT_MODE) applyAutostart(config.autostart);
     if (SESSION_AGENT_MODE || (config.id && config.secret)) connectHost('startup');
+    setTimeout(checkForUpdate, 15000).unref?.();
+    setInterval(checkForUpdate, 6 * 60 * 60 * 1000).unref?.();
   });
   if (!SERVICE_MODE) app.on('window-all-closed', (event) => { event?.preventDefault?.(); });
   app.on('before-quit', () => {
