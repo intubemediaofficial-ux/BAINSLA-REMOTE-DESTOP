@@ -29,6 +29,7 @@ export function createViewer(options = {}) {
   let pendingSessionEvents = [];
   let connectPassword = '';
   let quality = 'auto';
+  let controlEnabled = true;
   let zoom = 0;
   let pinchStart = null;
   const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
@@ -70,12 +71,15 @@ export function createViewer(options = {}) {
       : [...ZOOM_STEPS].reverse().find((step) => step < scale - 0.01) ?? ZOOM_STEPS[0];
     applyZoom(next, anchor);
   };
+  const inputAllowed = () => permissions.control && controlEnabled;
   const showViewOnly = () => {
     const help = q('.viewer-help');
-    if (help) help.textContent = permissions.control
+    if (help) help.textContent = inputAllowed()
       ? 'Click the desktop, then type · Ctrl + scroll to zoom · Drop files to send'
-      : 'View only: this screen is shared from a browser. For mouse and keyboard control, they need the Bainsla Remote app.';
-    q('.remote-stage')?.classList.toggle('is-view-only', !permissions.control);
+      : (!permissions.control
+        ? 'View only: this screen is shared from a browser. For mouse and keyboard control, they need the Bainsla Remote app.'
+        : 'View only: switch the mode to Control to use the mouse and keyboard.');
+    q('.remote-stage')?.classList.toggle('is-view-only', !inputAllowed());
   };
 
   const setStatus = (text, connected = false) => {
@@ -101,6 +105,7 @@ export function createViewer(options = {}) {
     pendingIceCandidates = [];
     pendingFileChunks = [];
     if (video) video.srcObject = null;
+    if (!new URLSearchParams(location.search).has('id')) q('#connect-card')?.removeAttribute('hidden');
     if (reason === 'viewer_closed') setStatus('Disconnected');
   };
   const actualPoint = (event) => {
@@ -240,6 +245,7 @@ export function createViewer(options = {}) {
     pc.ontrack = (event) => {
       video.srcObject = event.streams[0];
       video.play().catch(() => {});
+      q('#connect-card')?.setAttribute('hidden', '');
       setStatus(`Connected to ${data.hostInfo?.name || 'Desk'}${permissions.control ? '' : ' · view only'}`, true);
     };
     pc.ondatachannel = ({ channel }) => {
@@ -371,6 +377,7 @@ export function createViewer(options = {}) {
   q('#connect-button')?.addEventListener('click', connect);
   q('#disconnect-button')?.addEventListener('click', () => closeSession());
   q('#quality-select')?.addEventListener('change', (event) => setQuality(event.target.value));
+  q('#mode-select')?.addEventListener('change', (event) => { controlEnabled = event.target.value === 'control'; showViewOnly(); });
   q('#screen-select')?.addEventListener('change', (event) => sendCtl({ t: 'screen', id: event.target.value }));
   q('#fullscreen-button')?.addEventListener('click', () => {
     if (document.fullscreenElement) document.exitFullscreen?.();
@@ -421,13 +428,13 @@ export function createViewer(options = {}) {
   });
   video?.addEventListener('pointermove', (event) => {
     if (event.pointerType === 'touch') return;
-    if (!permissions.control) return;
+    if (!inputAllowed()) return;
     const point = actualPoint(event);
     if (point) sendCtl({ t: 'mm', ...point });
   });
   video?.addEventListener('pointerdown', (event) => {
     if (event.pointerType === 'touch') return;
-    if (!permissions.control) return;
+    if (!inputAllowed()) return;
     video.focus();
     video.setPointerCapture?.(event.pointerId);
     const point = actualPoint(event);
@@ -436,13 +443,13 @@ export function createViewer(options = {}) {
   });
   video?.addEventListener('pointerup', (event) => {
     if (event.pointerType === 'touch') return;
-    if (permissions.control) sendCtl({ t: 'mu', b: event.button === 2 ? 2 : event.button === 1 ? 1 : 0 });
+    if (inputAllowed()) sendCtl({ t: 'mu', b: event.button === 2 ? 2 : event.button === 1 ? 1 : 0 });
   });
   video?.addEventListener('contextmenu', (event) => event.preventDefault());
   video?.addEventListener('wheel', (event) => {
     event.preventDefault();
     if (event.ctrlKey || event.metaKey) return zoomStep(event.deltaY < 0 ? 1 : -1, { x: event.clientX, y: event.clientY });
-    if (!permissions.control) return;
+    if (!inputAllowed()) return;
     sendCtl({ t: 'wh', dx: event.deltaX, dy: event.deltaY });
   }, { passive: false });
   video?.addEventListener('keydown', (event) => {
@@ -452,12 +459,12 @@ export function createViewer(options = {}) {
       else zoomStep(['Equal', 'NumpadAdd'].includes(event.code) ? 1 : -1);
       return;
     }
-    if (!permissions.control) return;
+    if (!inputAllowed()) return;
     event.preventDefault();
     sendCtl({ t: 'kd', code: event.code, key: event.key });
   });
   video?.addEventListener('keyup', (event) => {
-    if (!permissions.control) return;
+    if (!inputAllowed()) return;
     event.preventDefault();
     sendCtl({ t: 'ku', code: event.code, key: event.key });
   });
@@ -469,9 +476,9 @@ export function createViewer(options = {}) {
       const touch = event.touches[0];
       const point = actualPoint({ clientX: touch.clientX, clientY: touch.clientY });
       touchStartPoint = point;
-      if (point && permissions.control) sendCtl({ t: 'mm', ...point });
+      if (point && inputAllowed()) sendCtl({ t: 'mm', ...point });
       touchTimer = setTimeout(() => {
-        if (!touchMoved && permissions.control) {
+        if (!touchMoved && inputAllowed()) {
           longPressed = true;
           sendCtl({ t: 'md', b: 2 });
         }
@@ -494,7 +501,7 @@ export function createViewer(options = {}) {
       if (point) {
         const start = touchStartPoint;
         const movedEnough = start && Math.hypot(point.x - start.x, point.y - start.y) > 0.008;
-        if (movedEnough && !dragStarted && !longPressed && permissions.control) {
+        if (movedEnough && !dragStarted && !longPressed && inputAllowed()) {
           dragStarted = true;
           sendCtl({ t: 'md', b: 0 });
         }
@@ -509,7 +516,7 @@ export function createViewer(options = {}) {
       if (pinchStart && (pinchStart.pinching || Math.abs(distance / pinchStart.distance - 1) > 0.12)) {
         pinchStart.pinching = true;
         applyZoom(pinchStart.scale * distance / pinchStart.distance, { x: centroid.x, y: centroid.y });
-      } else if (lastTouchCentroid && permissions.control) sendCtl({ t: 'wh', dx: lastTouchCentroid.x - centroid.x, dy: lastTouchCentroid.y - centroid.y });
+      } else if (lastTouchCentroid && inputAllowed()) sendCtl({ t: 'wh', dx: lastTouchCentroid.x - centroid.x, dy: lastTouchCentroid.y - centroid.y });
       lastTouchCentroid = centroid;
     }
   }, { passive: true });
@@ -517,7 +524,7 @@ export function createViewer(options = {}) {
     clearTimeout(touchTimer);
     if (longPressed) sendCtl({ t: 'mu', b: 2 });
     else if (dragStarted) sendCtl({ t: 'mu', b: 0 });
-    else if (event.changedTouches.length && !touchMoved && permissions.control && !pinchStart) {
+    else if (event.changedTouches.length && !touchMoved && inputAllowed() && !pinchStart) {
       sendCtl({ t: 'md', b: 0 });
       sendCtl({ t: 'mu', b: 0 });
     }

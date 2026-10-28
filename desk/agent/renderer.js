@@ -140,15 +140,18 @@ async function pollAddressBook() {
 }
 async function captureSource(source) {
   // TODO: Plug a native C++ helper in here for Winlogon secure-desktop capture and input.
-  return navigator.mediaDevices.getUserMedia({
+  const stream = await navigator.mediaDevices.getUserMedia({
     audio: false,
     video: {
       mandatory: {
         chromeMediaSource: 'desktop', chromeMediaSourceId: source.sourceId,
-        maxWidth: Math.max(1920, source.width), maxHeight: Math.max(1080, source.height), maxFrameRate: 30
+        maxWidth: Math.max(1920, source.width), maxHeight: Math.max(1080, source.height), maxFrameRate: 60
       }
     }
   });
+  const track = stream.getVideoTracks()[0];
+  if (track) track.contentHint = 'detail';
+  return stream;
 }
 async function setSessionQuality(session, preset) {
   const sender = session.peer.getSenders().find((item) => item.track?.kind === 'video');
@@ -156,10 +159,11 @@ async function setSessionQuality(session, preset) {
   const parameters = sender.getParameters();
   parameters.encodings = parameters.encodings?.length ? parameters.encodings : [{}];
   const width = session.currentScreen.width;
-  const maxWidth = preset === 'low' ? 1280 : preset === 'balanced' || preset === 'auto' ? 1600 : width;
-  parameters.encodings[0].maxBitrate = preset === 'high' ? 8000000 : preset === 'low' ? 1000000 : 3000000;
-  parameters.encodings[0].maxFramerate = preset === 'high' ? 30 : preset === 'low' ? 15 : 24;
+  const maxWidth = preset === 'low' ? 1280 : preset === 'balanced' ? 1920 : width;
+  parameters.encodings[0].maxBitrate = preset === 'high' ? 25000000 : preset === 'low' ? 1500000 : preset === 'balanced' ? 6000000 : 14000000;
+  parameters.encodings[0].maxFramerate = preset === 'low' ? 15 : preset === 'balanced' ? 30 : 60;
   parameters.encodings[0].scaleResolutionDownBy = Math.max(1, width / maxWidth);
+  parameters.degradationPreference = 'maintain-resolution';
   await sender.setParameters(parameters);
 }
 async function replaceHostScreen(session, sourceId) {
