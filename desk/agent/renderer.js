@@ -428,6 +428,7 @@ window.kv.getConfig().then((config) => {
   if (!config.id) connect();
 });
 $('settings-close').onclick = () => $('settings-panel').hidden = true;
+$('quit-app').onclick = () => { if (confirm('Stop Bainsla Remote? Remote access will be off until you open the app again.')) window.kv.quit(); };
 async function refreshPermissions() {
   const status = await window.kv.getPermissions();
   if (!status.required) return;
