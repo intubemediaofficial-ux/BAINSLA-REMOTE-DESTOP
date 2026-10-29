@@ -121,6 +121,7 @@ setInterval(() => {
 const requestIp = (req) => String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 const secureFlag = (req) => (req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '');
 db.prepare('DELETE FROM admin_sessions WHERE expires_at <= ?').run(nowIso());
+db.prepare("UPDATE sessions SET ended_at = ?, end_reason = 'server_restart' WHERE ended_at IS NULL").run(nowIso());
 const adminSessionGet = db.prepare('SELECT email, expires_at FROM admin_sessions WHERE id = ?');
 const adminSessionDelete = db.prepare('DELETE FROM admin_sessions WHERE id = ?');
 const prefixed = (route) => `${BASE_PATH}${route}` || '/';
