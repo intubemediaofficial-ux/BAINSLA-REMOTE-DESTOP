@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /v/
+Disallow: /api/
+
+Sitemap: https://remote.bainslamusic.com/sitemap.xml
