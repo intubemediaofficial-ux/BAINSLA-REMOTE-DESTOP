@@ -62,6 +62,13 @@ if (process.env.ADMIN_PASSWORD) {
 
 const app = express();
 app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (req.headers['x-forwarded-proto'] === 'https') res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+  next();
+});
 app.use(express.json({ limit: '2mb' }));
 app.use((req, res, next) => {
   if (BASE_PATH && (req.path === BASE_PATH || req.path.startsWith(`${BASE_PATH}/`))) {
@@ -96,7 +103,25 @@ const sessions = new Map();
 const malformedCandidateWarnings = new Set();
 const failedAttempts = new Map();
 const nowIso = () => new Date().toISOString();
+const rateBuckets = new Map();
+const overLimit = (key, limit, windowMs) => {
+  const now = Date.now();
+  let bucket = rateBuckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    bucket = { count: 0, resetAt: now + windowMs };
+    rateBuckets.set(key, bucket);
+  }
+  bucket.count += 1;
+  return bucket.count > limit;
+};
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of rateBuckets) if (bucket.resetAt <= now) rateBuckets.delete(key);
+}, 10 * 60 * 1000).unref();
+const requestIp = (req) => String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+const secureFlag = (req) => (req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '');
 db.prepare('DELETE FROM admin_sessions WHERE expires_at <= ?').run(nowIso());
+db.prepare("UPDATE sessions SET ended_at = ?, end_reason = 'server_restart' WHERE ended_at IS NULL").run(nowIso());
 const adminSessionGet = db.prepare('SELECT email, expires_at FROM admin_sessions WHERE id = ?');
 const adminSessionDelete = db.prepare('DELETE FROM admin_sessions WHERE id = ?');
 const prefixed = (route) => `${BASE_PATH}${route}` || '/';
@@ -170,19 +195,28 @@ app.get('/api/settings/public', (_req, res) => {
 app.post('/api/admin/login', (req, res) => {
   const email = String(req.body?.email || '').toLowerCase();
   const password = String(req.body?.password || '');
+  const ipKey = `login-ip|${requestIp(req)}`;
+  const emailKey = `login-email|${email}`;
+  const locked = (key, limit) => (rateBuckets.get(key)?.count || 0) >= limit && rateBuckets.get(key).resetAt > Date.now();
+  if (locked(ipKey, 10) || locked(emailKey, 30)) return res.status(429).json({ error: 'too_many_attempts' });
   const admin = db.prepare('SELECT email, pw_hash FROM admins WHERE email = ?').get(email);
-  if (!admin || !bcrypt.compareSync(password, admin.pw_hash)) return res.status(401).json({ error: 'invalid_credentials' });
+  if (!admin || !bcrypt.compareSync(password, admin.pw_hash)) {
+    overLimit(ipKey, 10, 15 * 60 * 1000);
+    overLimit(emailKey, 30, 15 * 60 * 1000);
+    return res.status(401).json({ error: 'invalid_credentials' });
+  }
+  rateBuckets.delete(ipKey);
   const id = crypto.randomBytes(24).toString('base64url');
   const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
   db.prepare('INSERT INTO admin_sessions(id, email, expires_at) VALUES (?, ?, ?)').run(id, admin.email, expiresAt);
-  res.setHeader('Set-Cookie', `kvdesk_admin=${encodeURIComponent(signature.sign(id, SESSION_SECRET))}; Path=${BASE_PATH || '/'}; HttpOnly; SameSite=Lax; Max-Age=2592000`);
+  res.setHeader('Set-Cookie', `kvdesk_admin=${encodeURIComponent(signature.sign(id, SESSION_SECRET))}; Path=${BASE_PATH || '/'}; HttpOnly; SameSite=Lax; Max-Age=2592000${secureFlag(req)}`);
   res.json({ ok: true, email: admin.email });
 });
 app.post('/api/admin/logout', requireAdmin, (req, res) => {
   const cookie = (req.headers.cookie || '').match(/(?:^|;\s*)kvdesk_admin=([^;]+)/);
   const id = cookie && signature.unsign(decodeURIComponent(cookie[1]), SESSION_SECRET);
   if (id) adminSessionDelete.run(id);
-  res.setHeader('Set-Cookie', `kvdesk_admin=; Path=${BASE_PATH || '/'}; HttpOnly; SameSite=Lax; Max-Age=0`);
+  res.setHeader('Set-Cookie', `kvdesk_admin=; Path=${BASE_PATH || '/'}; HttpOnly; SameSite=Lax; Max-Age=0${secureFlag(req)}`);
   res.json({ ok: true });
 });
 app.get('/api/admin/me', requireAdmin, (req, res) => res.json({ email: req.admin.email }));
@@ -349,6 +383,7 @@ app.post('/api/admin/password', requireAdmin, (req, res) => {
   const oldPassword = String(req.body?.oldPassword || '');
   const password = String(req.body?.password || '');
   if (password.length < 8) return res.status(400).json({ error: 'password_too_short' });
+  if (overLimit(`password-change|${req.admin.email}`, 10, 15 * 60 * 1000)) return res.status(429).json({ error: 'too_many_attempts' });
   const admin = db.prepare('SELECT pw_hash FROM admins WHERE email = ?').get(req.admin.email);
   if (!bcrypt.compareSync(oldPassword, admin.pw_hash)) return res.status(400).json({ error: 'invalid_password' });
   db.prepare('UPDATE admins SET pw_hash = ? WHERE email = ?').run(bcrypt.hashSync(password, 12), req.admin.email);
@@ -437,6 +472,7 @@ io.on('connection', (socket) => {
       return ack({ ok: true, id, iceServers: makeIceServers() });
     }
     if (id) return ack({ ok: false, error: 'invalid_secret' });
+    if (overLimit(`register|${socketIp(socket)}`, 30, 60 * 60 * 1000)) return ack({ ok: false, error: 'rate_limited' });
     const allocatedId = newId();
     const secret = crypto.randomBytes(32).toString('hex');
     const timestamp = nowIso();
@@ -462,6 +498,7 @@ io.on('connection', (socket) => {
     if (!target) return ack({ ok: false, error: 'not_found' });
     if (target.blocked) return ack({ ok: false, error: 'blocked' });
     const ip = socketIp(socket);
+    if (overLimit(`connect|${ip}`, 30, 60 * 1000)) return ack({ ok: false, error: 'rate_limited' });
     const key = `${ip}|${target.id}`;
     const attempt = failedAttempts.get(key);
     if (attempt?.until > Date.now()) return ack({ ok: false, error: 'rate_limited' });

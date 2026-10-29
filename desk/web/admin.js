@@ -18,7 +18,7 @@ function renderLogin(message = '') {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget));
     try { await request('/api/admin/login', { method: 'POST', body: JSON.stringify(values) }); renderAdmin(); }
-    catch { renderLogin('Email or password is incorrect.'); }
+    catch (error) { renderLogin(error.message === 'too_many_attempts' ? 'Too many wrong attempts. Wait 15 minutes or use Forgot password.' : 'Email or password is incorrect.'); }
   });
 }
 const resetErrors = {
@@ -135,7 +135,9 @@ async function renderSettings(container) {
       form.reset();
       alert('Password updated');
     } catch (error) {
-      alert(error.message === 'invalid_password' ? 'Current password is incorrect.' : error.message === 'password_too_short' ? 'New password must be at least 8 characters.' : 'Could not update the password.');
+      alert(error.message === 'invalid_password' ? 'Current password is incorrect.'
+        : error.message === 'too_many_attempts'
+          ? 'Too many attempts. Wait 15 minutes.' : error.message === 'password_too_short' ? 'New password must be at least 8 characters.' : 'Could not update the password.');
     }
   };
 }

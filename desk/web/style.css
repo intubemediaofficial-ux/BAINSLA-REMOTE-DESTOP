@@ -391,3 +391,10 @@ body[data-viewer="true"] .viewer-layout, body.electron-viewer .viewer-layout { p
   body[data-viewer="true"] .chat-panel.open, body.electron-viewer .chat-panel.open { position: absolute; right: 0; top: 0; bottom: 0; z-index: 5; width: min(320px, 88vw); }
 }
 .viewer-bar .status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+@media (max-width: 760px) {
+  .admin-shell { flex-direction: column; }
+  .admin-side { width: auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 8px; position: sticky; top: 0; z-index: 10; }
+  .admin-side .brand, .admin-side > small { display: none; }
+  .admin-side nav { display: contents; }
+  .admin-side nav button, .admin-side .logout { font-size: 11px; padding: 8px 2px; text-align: center; margin: 0; line-height: 1.25; }
+}
