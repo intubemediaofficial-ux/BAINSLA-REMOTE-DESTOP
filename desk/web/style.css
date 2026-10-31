@@ -376,6 +376,7 @@ body[data-viewer="true"] .viewer-layout, body.electron-viewer .viewer-layout { f
 .zoom-group button:first-child { border-radius: 8px 0 0 8px; }
 .zoom-group button:last-child { border-radius: 0 8px 8px 0; }
 .zoom-group #zoom-label { min-width: 52px; border-left: 0; border-right: 0; font-variant-numeric: tabular-nums; }
+.remote-stage:not(.is-zoomed) #remote-video { position: absolute; inset: 0; }
 .remote-stage.is-zoomed { display: block; overflow: auto; }
 .remote-stage.is-zoomed #remote-video { display: block; max-width: none; max-height: none; object-fit: fill; margin: 0 auto; }
 .remote-stage.is-zoomed .viewer-help { display: none; }

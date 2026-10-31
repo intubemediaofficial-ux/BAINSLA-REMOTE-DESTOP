@@ -72,6 +72,7 @@ export function createViewer(options = {}) {
     applyZoom(next, anchor);
   };
   const inputAllowed = () => permissions.control && controlEnabled;
+  const helpDefault = q('.viewer-help')?.textContent || '';
   const showViewOnly = () => {
     const help = q('.viewer-help');
     if (help) help.textContent = inputAllowed()
@@ -105,6 +106,11 @@ export function createViewer(options = {}) {
     pendingIceCandidates = [];
     pendingFileChunks = [];
     if (video) video.srcObject = null;
+    const statsElement = q('#connection-stats');
+    if (statsElement) statsElement.textContent = '';
+    const help = q('.viewer-help');
+    if (help) help.textContent = helpDefault;
+    q('.remote-stage')?.classList.remove('is-view-only');
     if (!new URLSearchParams(location.search).has('id')) q('#connect-card')?.removeAttribute('hidden');
     if (reason === 'viewer_closed') setStatus('Disconnected');
   };

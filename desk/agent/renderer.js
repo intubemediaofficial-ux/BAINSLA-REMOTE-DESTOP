@@ -1,4 +1,4 @@
-const state = { config: null, hostSessions: new Map(), activeHostSession: null, book: [], online: {}, previousOnline: {} };
+const state = { config: null, hostSessions: new Map(), chatLogs: new Map(), activeHostSession: null, book: [], online: {}, previousOnline: {} };
 const $ = (id) => document.getElementById(id);
 function toast(message) {
   $('toast').textContent = message;
@@ -53,9 +53,34 @@ function renderHostSessions(sessions) {
       window.kv.sendActiveChat(sessionId, text);
       chatInput.value = '';
     };
-    card.append(title, actions, chatForm);
+    const chatLog = document.createElement('div');
+    chatLog.className = 'session-chat-log';
+    for (const line of state.chatLogs.get(String(sessionId)) || []) chatLog.append(chatLine(line));
+    chatLog.hidden = !chatLog.childElementCount;
+    if (chatLog.childElementCount) chatForm.hidden = false;
+    card.append(title, actions, chatLog, chatForm);
     container.append(card);
   }
+}
+function chatLine({ who, text }) {
+  const line = document.createElement('p');
+  const name = document.createElement('strong');
+  name.textContent = `${who}: `;
+  line.append(name, text);
+  return line;
+}
+function addHostChat(sessionId, who, text) {
+  const key = String(sessionId);
+  const log = state.chatLogs.get(key) || [];
+  log.push({ who, text });
+  state.chatLogs.set(key, log.slice(-100));
+  const card = [...document.querySelectorAll('.host-session-card')].find((item) => item.dataset.sessionId === key);
+  const chatLog = card?.querySelector('.session-chat-log');
+  if (!chatLog) return;
+  chatLog.append(chatLine({ who, text }));
+  chatLog.hidden = false;
+  chatLog.scrollTop = chatLog.scrollHeight;
+  card.querySelector('.session-chat').hidden = false;
 }
 function setStatus(status) {
   const normalized = ['Online', 'Connecting', 'Offline', 'Blocked'].includes(status) ? status : 'Offline';
@@ -255,6 +280,7 @@ async function startHostSession(data) {
       setSessionQuality(session, message.q).catch(() => {});
     } else if (message.t === 'chat') {
       toast(`${data.viewerName || 'Viewer'}: ${message.text}`);
+      addHostChat(session.id, data.viewerName || 'Viewer', String(message.text || ''));
     } else if (message.t === 'clip' && session.permissions.clipboard) {
       window.kv.writeClipboard(message.text);
     } else if (message.t === 'fs' && session.permissions.files) {
@@ -283,6 +309,7 @@ async function startHostSession(data) {
   });
 }
 function endHostSession(sessionId) {
+  state.chatLogs.delete(String(sessionId));
   const session = state.hostSessions.get(sessionId);
   if (!session) return;
   session.peer.close();
@@ -405,7 +432,10 @@ window.kv.onHostSignal((payload) => {
 });
 window.kv.onHostSendChat((text) => {
   const session = state.hostSessions.get(text.sessionId);
-  if (session?.ctl.readyState === 'open') session.ctl.send(JSON.stringify({ t: 'chat', text: text.text }));
+  if (session?.ctl.readyState === 'open') {
+    session.ctl.send(JSON.stringify({ t: 'chat', text: text.text }));
+    addHostChat(text.sessionId, 'You', text.text);
+  }
 });
 window.kv.onHostSendFile((file) => {
   const session = state.hostSessions.get(file.sessionId);
