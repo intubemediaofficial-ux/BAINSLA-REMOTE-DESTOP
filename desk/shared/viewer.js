@@ -105,6 +105,8 @@ export function createViewer(options = {}) {
     pendingIceCandidates = [];
     pendingFileChunks = [];
     if (video) video.srcObject = null;
+    const statsElement = q('#connection-stats');
+    if (statsElement) statsElement.textContent = '';
     if (!new URLSearchParams(location.search).has('id')) q('#connect-card')?.removeAttribute('hidden');
     if (reason === 'viewer_closed') setStatus('Disconnected');
   };
