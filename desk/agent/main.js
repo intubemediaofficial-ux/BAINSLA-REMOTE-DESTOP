@@ -295,6 +295,13 @@ function connectHost(caller = 'unspecified') {
     }, (result) => {
       if (result?.ok) logEvent(`host agent:hello ok=true id=${safeLogText(result.id || 'unknown')}`);
       else logEvent(`host agent:hello ok=false error=${safeLogText(result?.error || result?.reason || 'unknown')}`);
+      if (!result?.ok && result?.error === 'not_found' && currentConfig.id) {
+        logEvent('host device removed on server; registering a new ID');
+        saveConfig({ ...currentConfig, id: '', secret: '' });
+        socket.disconnect();
+        setTimeout(() => connectHost('reregister'), 1000);
+        return;
+      }
       if (!result?.ok) {
         blocked = result?.error === 'blocked';
         reportStatus(blocked ? 'Blocked' : 'Offline');
