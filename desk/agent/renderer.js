@@ -312,6 +312,7 @@ function endHostSession(sessionId) {
   state.chatLogs.delete(String(sessionId));
   const session = state.hostSessions.get(sessionId);
   if (!session) return;
+  if (session.permissions?.control) window.kv.releaseInput?.().catch(() => {});
   session.peer.close();
   session.stream.getTracks().forEach((track) => track.stop());
   session.ctl.close();

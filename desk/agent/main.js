@@ -45,6 +45,7 @@ const pendingMainEvents = [];
 const lastClick = { button: -1, at: 0, x: 0, y: 0 };
 let lastPointer = { x: 0, y: 0 };
 let pressedButton = -1;
+const heldKeys = new Set();
 let pendingDoubleClick = false;
 function platformName() {
   if (process.platform === 'win32') return 'windows';
@@ -653,6 +654,16 @@ function registerIpc() {
         primary: display.id === screen.getPrimaryDisplay().id };
     });
   });
+  ipcMain.handle('input:release-all', () => {
+    const operation = inputQueue.then(async () => {
+      for (const key of [...heldKeys]) await keyboard.releaseKey(key).catch(() => {});
+      heldKeys.clear();
+      if (pressedButton >= 0) await mouse.releaseButton([Button.LEFT, Button.MIDDLE, Button.RIGHT][pressedButton] || Button.LEFT).catch(() => {});
+      pressedButton = -1;
+    });
+    inputQueue = operation.catch(() => {});
+    return operation;
+  });
   ipcMain.handle('input:dispatch', (_event, message) => {
     const operation = inputQueue.then(async () => {
       const display = screen.getAllDisplays().find((d) => String(d.id) === String(message.displayId)) || screen.getPrimaryDisplay();
@@ -697,7 +708,10 @@ function registerIpc() {
       }
       if (message.t === 'kd' || message.t === 'ku') {
         const key = nutKey(Key, message.code);
-        if (key) await (message.t === 'kd' ? keyboard.pressKey(key) : keyboard.releaseKey(key));
+        if (key) {
+          if (message.t === 'kd') heldKeys.add(key); else heldKeys.delete(key);
+          await (message.t === 'kd' ? keyboard.pressKey(key) : keyboard.releaseKey(key));
+        }
         else if (message.t === 'kd' && message.key?.length === 1) await keyboard.type(message.key);
       }
       if (message.t === 'combo') {

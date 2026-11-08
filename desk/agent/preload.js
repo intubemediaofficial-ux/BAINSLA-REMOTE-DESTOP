@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('kv', {
   connectHost: (data) => ipcRenderer.invoke('host:connect', data),
   getScreens: () => ipcRenderer.invoke('screens:list'),
   dispatchInput: (data) => ipcRenderer.invoke('input:dispatch', data),
+  releaseInput: () => ipcRenderer.invoke('input:release-all'),
   emitHost: (name, data) => ipcRenderer.invoke('host:emit', name, data),
   readClipboard: () => ipcRenderer.invoke('clipboard:read'),
   writeClipboard: (text) => ipcRenderer.invoke('clipboard:write', text),

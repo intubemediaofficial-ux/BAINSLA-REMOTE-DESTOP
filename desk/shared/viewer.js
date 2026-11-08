@@ -88,11 +88,17 @@ export function createViewer(options = {}) {
     status.textContent = text;
     status.classList.toggle('is-online', connected);
   };
+  const heldKeys = new Map();
+  const releaseHeldKeys = () => {
+    for (const [code, key] of heldKeys) sendCtl({ t: 'ku', code, key });
+    heldKeys.clear();
+  };
   const sendCtl = (message) => {
     if (ctl?.readyState === 'open') ctl.send(JSON.stringify(message));
   };
   if (typeof window !== 'undefined') window.__kvDeskSendCtl = sendCtl;
   const closeSession = (reason = 'viewer_closed') => {
+    releaseHeldKeys();
     if (sessionId) socket.emit('session:end', { sessionId, reason });
     if (window.__kvDeskDebugPeer === pc) delete window.__kvDeskDebugPeer;
     pc?.close();
@@ -210,7 +216,8 @@ export function createViewer(options = {}) {
     list.scrollTop = list.scrollHeight;
   };
   const sendFile = async (file) => {
-    if (!permissions.files || !file || !fileChannel || fileChannel.readyState !== 'open') return;
+    if (!file) return;
+    if (!permissions.files || !fileChannel || fileChannel.readyState !== 'open') return setStatus('File transfer is not available in this session', true);
     if (fileBusy) return setStatus('A file is already transferring');
     fileBusy = true;
     try {
@@ -230,7 +237,8 @@ export function createViewer(options = {}) {
         setStatus(`Sending ${file.name} · ${Math.round(offset / file.size * 100)}%`, true);
       }
       sendCtl({ t: 'fe', id });
-      setStatus('Connected', true);
+      setStatus(`Sent ${file.name}`, true);
+      appendChat(`File sent: ${file.name}`, 'viewer');
     } finally {
       fileBusy = false;
     }
@@ -383,7 +391,7 @@ export function createViewer(options = {}) {
   q('#connect-button')?.addEventListener('click', connect);
   q('#disconnect-button')?.addEventListener('click', () => closeSession());
   q('#quality-select')?.addEventListener('change', (event) => setQuality(event.target.value));
-  q('#mode-select')?.addEventListener('change', (event) => { controlEnabled = event.target.value === 'control'; showViewOnly(); });
+  q('#mode-select')?.addEventListener('change', (event) => { controlEnabled = event.target.value === 'control'; if (!controlEnabled) releaseHeldKeys(); showViewOnly(); });
   q('#screen-select')?.addEventListener('change', (event) => sendCtl({ t: 'screen', id: event.target.value }));
   q('#fullscreen-button')?.addEventListener('click', () => {
     if (document.fullscreenElement) document.exitFullscreen?.();
@@ -467,11 +475,16 @@ export function createViewer(options = {}) {
     }
     if (!inputAllowed()) return;
     event.preventDefault();
+    if (event.code) heldKeys.set(event.code, event.key);
     sendCtl({ t: 'kd', code: event.code, key: event.key });
   });
+  video?.addEventListener('blur', releaseHeldKeys);
+  window.addEventListener('blur', releaseHeldKeys);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) releaseHeldKeys(); });
   video?.addEventListener('keyup', (event) => {
     if (!inputAllowed()) return;
     event.preventDefault();
+    heldKeys.delete(event.code);
     sendCtl({ t: 'ku', code: event.code, key: event.key });
   });
   video?.addEventListener('touchstart', (event) => {
