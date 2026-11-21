@@ -100,7 +100,10 @@ if (isCrawler) {
       }
     } catch (error) { console.error('Signaling error', error); }
   });
-  socket.on('session:kill', ({ sessionId }) => { if (current?.id === sessionId) endLocal('The session ended'); });
+  socket.on('session:kill', ({ sessionId }) => {
+    if (pendingRequest?.sessionId === sessionId) closeRequest();
+    if (current?.id === sessionId) endLocal('The session ended');
+  });
 
   async function startPeer(data) {
     const session = current;

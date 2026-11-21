@@ -30,6 +30,7 @@ export function createViewer(options = {}) {
   let pendingSessionEvents = [];
   let connectPassword = '';
   let connectTarget = '';
+  let passwordTarget = '';
   let quality = 'auto';
   let controlEnabled = true;
   let zoom = 0;
@@ -155,6 +156,7 @@ export function createViewer(options = {}) {
       sessionStorage.getItem(`kvdesk-password:${targetId.toLowerCase()}`) || '';
     connectPassword = password;
     connectTarget = targetId.toLowerCase();
+    passwordTarget = connectTarget;
     sessionStorage.removeItem(`kvdesk-password:${targetId.toLowerCase()}`);
     pc?.close();
     pc = null;
@@ -413,6 +415,11 @@ export function createViewer(options = {}) {
   });
 
   syncToolbar();
+  q('#target-id')?.addEventListener('input', () => {
+    const typed = q('#target-id').value.trim().replace(/\s/g, '').toLowerCase();
+    const field = q('#viewer-password');
+    if (field && typed !== passwordTarget) field.value = '';
+  });
   q('#connect-button')?.addEventListener('click', connect);
   q('#disconnect-button')?.addEventListener('click', () => closeSession());
   q('#quality-select')?.addEventListener('change', (event) => setQuality(event.target.value));
