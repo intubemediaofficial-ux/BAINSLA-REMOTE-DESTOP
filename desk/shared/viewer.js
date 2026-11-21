@@ -29,6 +29,7 @@ export function createViewer(options = {}) {
   let pendingSessionSignals = [];
   let pendingSessionEvents = [];
   let connectPassword = '';
+  let connectTarget = '';
   let quality = 'auto';
   let controlEnabled = true;
   let zoom = 0;
@@ -122,6 +123,7 @@ export function createViewer(options = {}) {
     const help = q('.viewer-help');
     if (help) help.textContent = helpDefault;
     q('.remote-stage')?.classList.remove('is-view-only', 'is-connected');
+    lastSentClip = null;
     q('#connect-card')?.removeAttribute('hidden');
     syncToolbar();
     if (reason === 'viewer_closed') setStatus('Disconnected');
@@ -144,10 +146,15 @@ export function createViewer(options = {}) {
   const connect = async () => {
     if (connecting) return;
     const params = new URLSearchParams(location.search);
-    const targetId = (params.get('id') || q('#target-id')?.value?.trim() || '').replace(/\s/g, '');
+    const linkId = (params.get('id') || '').replace(/\s/g, '');
+    const targetId = (q('#target-id')?.value?.trim() || linkId).replace(/\s/g, '');
     if (!targetId) return setStatus('Enter a Desk ID');
-    const password = q('#viewer-password')?.value || params.get('password') || sessionStorage.getItem(`kvdesk-password:${targetId.toLowerCase()}`) || connectPassword;
+    const password = q('#viewer-password')?.value ||
+      (targetId.toLowerCase() === connectTarget ? connectPassword : '') ||
+      (targetId === linkId ? params.get('password') : '') ||
+      sessionStorage.getItem(`kvdesk-password:${targetId.toLowerCase()}`) || '';
     connectPassword = password;
+    connectTarget = targetId.toLowerCase();
     sessionStorage.removeItem(`kvdesk-password:${targetId.toLowerCase()}`);
     pc?.close();
     pc = null;
@@ -171,6 +178,7 @@ export function createViewer(options = {}) {
         return setStatus(({ not_found: 'No device with this ID or name. Ask for the ID shown in their Bainsla Remote app.', offline: 'Desk is offline. Ask them to open the Bainsla Remote app.', blocked: 'This device is blocked by the admin.', invalid_password: 'Wrong password.', rate_limited: 'Too many attempts. Wait a minute and try again.' })[response?.error] || `Could not connect: ${response?.error || 'error'}`);
       }
       sessionId = response.sessionId;
+      syncToolbar();
       setStatus('Waiting for accept…');
       for (const signal of pendingSessionSignals.splice(0)) {
         if (signal.sessionId === sessionId) await handleSignal(signal.data);
@@ -192,7 +200,9 @@ export function createViewer(options = {}) {
       }
     } else if (message.t === 'chat') {
       appendChat(message.text, 'host');
-    } else if (message.t === 'clip' && permissions.clipboard && message.text !== lastSentClip) {
+    } else if (message.t === 'clip' && message.text === lastSentClip) {
+      lastSentClip = null;
+    } else if (message.t === 'clip' && permissions.clipboard) {
       navigator.clipboard?.writeText(message.text).catch(() => {});
       setStatus('Text copied from host', true);
     } else if (message.t === 'perm') {
