@@ -356,6 +356,7 @@ export function createViewer(options = {}) {
       pc?.close();
       pc = null;
       sessionId = null;
+      syncToolbar();
       pendingSignals = [];
       pendingSessionSignals = [];
       pendingSessionEvents = [];
