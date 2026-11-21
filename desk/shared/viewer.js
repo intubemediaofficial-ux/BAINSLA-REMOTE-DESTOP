@@ -84,6 +84,10 @@ export function createViewer(options = {}) {
     q('.remote-stage')?.classList.toggle('is-view-only', !inputAllowed());
   };
 
+  const syncToolbar = () => {
+    const dc = q('#disconnect-button');
+    if (dc) dc.disabled = !sessionId;
+  };
   const setStatus = (text, connected = false) => {
     if (!status) return;
     status.textContent = text;
@@ -117,8 +121,9 @@ export function createViewer(options = {}) {
     if (statsElement) statsElement.textContent = '';
     const help = q('.viewer-help');
     if (help) help.textContent = helpDefault;
-    q('.remote-stage')?.classList.remove('is-view-only');
-    if (!new URLSearchParams(location.search).has('id')) q('#connect-card')?.removeAttribute('hidden');
+    q('.remote-stage')?.classList.remove('is-view-only', 'is-connected');
+    q('#connect-card')?.removeAttribute('hidden');
+    syncToolbar();
     if (reason === 'viewer_closed') setStatus('Disconnected');
   };
   const actualPoint = (event) => {
@@ -261,6 +266,10 @@ export function createViewer(options = {}) {
       video.srcObject = event.streams[0];
       video.play().catch(() => {});
       q('#connect-card')?.setAttribute('hidden', '');
+      q('.remote-stage')?.classList.add('is-connected');
+      const passwordField = q('#viewer-password');
+      if (passwordField) passwordField.value = '';
+      syncToolbar();
       setStatus(`Connected to ${data.hostInfo?.name || 'Desk'}${permissions.control ? '' : ' · view only'}`, true);
     };
     pc.ondatachannel = ({ channel }) => {
@@ -363,6 +372,9 @@ export function createViewer(options = {}) {
       pendingSignals = [];
       pendingSessionSignals = [];
       pendingSessionEvents = [];
+      q('#connect-card')?.removeAttribute('hidden');
+      q('.remote-stage')?.classList.remove('is-connected');
+      syncToolbar();
       setStatus(data.reason === 'disconnect' ? 'Desk disconnected' : 'Session ended');
     }
   };
@@ -386,9 +398,11 @@ export function createViewer(options = {}) {
     pendingSignals = [];
     pendingSessionSignals = [];
     pendingSessionEvents = [];
+    syncToolbar();
     setStatus('Reconnecting…');
   });
 
+  syncToolbar();
   q('#connect-button')?.addEventListener('click', connect);
   q('#disconnect-button')?.addEventListener('click', () => closeSession());
   q('#quality-select')?.addEventListener('change', (event) => setQuality(event.target.value));
