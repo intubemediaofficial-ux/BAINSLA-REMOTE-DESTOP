@@ -13,6 +13,7 @@ export function createViewer(options = {}) {
   let fileChannel;
   let sessionId;
   let permissions = { control: true, clipboard: true, files: true };
+  let lastSentClip = null;
   let receiving = null;
   let fileBusy = false;
   let touchTimer;
@@ -28,6 +29,8 @@ export function createViewer(options = {}) {
   let pendingSessionSignals = [];
   let pendingSessionEvents = [];
   let connectPassword = '';
+  let connectTarget = '';
+  let passwordTarget = '';
   let quality = 'auto';
   let controlEnabled = true;
   let zoom = 0;
@@ -83,6 +86,10 @@ export function createViewer(options = {}) {
     q('.remote-stage')?.classList.toggle('is-view-only', !inputAllowed());
   };
 
+  const syncToolbar = () => {
+    const dc = q('#disconnect-button');
+    if (dc) dc.disabled = !sessionId;
+  };
   const setStatus = (text, connected = false) => {
     if (!status) return;
     status.textContent = text;
@@ -116,8 +123,10 @@ export function createViewer(options = {}) {
     if (statsElement) statsElement.textContent = '';
     const help = q('.viewer-help');
     if (help) help.textContent = helpDefault;
-    q('.remote-stage')?.classList.remove('is-view-only');
-    if (!new URLSearchParams(location.search).has('id')) q('#connect-card')?.removeAttribute('hidden');
+    q('.remote-stage')?.classList.remove('is-view-only', 'is-connected');
+    lastSentClip = null;
+    q('#connect-card')?.removeAttribute('hidden');
+    syncToolbar();
     if (reason === 'viewer_closed') setStatus('Disconnected');
   };
   const actualPoint = (event) => {
@@ -138,10 +147,16 @@ export function createViewer(options = {}) {
   const connect = async () => {
     if (connecting) return;
     const params = new URLSearchParams(location.search);
-    const targetId = (params.get('id') || q('#target-id')?.value?.trim() || '').replace(/\s/g, '');
+    const linkId = (params.get('id') || '').replace(/\s/g, '');
+    const targetId = (q('#target-id')?.value?.trim() || linkId).replace(/\s/g, '');
     if (!targetId) return setStatus('Enter a Desk ID');
-    const password = q('#viewer-password')?.value || params.get('password') || sessionStorage.getItem(`kvdesk-password:${targetId.toLowerCase()}`) || connectPassword;
+    const password = q('#viewer-password')?.value ||
+      (targetId.toLowerCase() === connectTarget ? connectPassword : '') ||
+      (targetId === linkId ? params.get('password') : '') ||
+      sessionStorage.getItem(`kvdesk-password:${targetId.toLowerCase()}`) || '';
     connectPassword = password;
+    connectTarget = targetId.toLowerCase();
+    passwordTarget = connectTarget;
     sessionStorage.removeItem(`kvdesk-password:${targetId.toLowerCase()}`);
     pc?.close();
     pc = null;
@@ -165,6 +180,7 @@ export function createViewer(options = {}) {
         return setStatus(({ not_found: 'No device with this ID or name. Ask for the ID shown in their Bainsla Remote app.', offline: 'Desk is offline. Ask them to open the Bainsla Remote app.', blocked: 'This device is blocked by the admin.', invalid_password: 'Wrong password.', rate_limited: 'Too many attempts. Wait a minute and try again.' })[response?.error] || `Could not connect: ${response?.error || 'error'}`);
       }
       sessionId = response.sessionId;
+      syncToolbar();
       setStatus('Waiting for accept…');
       for (const signal of pendingSessionSignals.splice(0)) {
         if (signal.sessionId === sessionId) await handleSignal(signal.data);
@@ -186,6 +202,8 @@ export function createViewer(options = {}) {
       }
     } else if (message.t === 'chat') {
       appendChat(message.text, 'host');
+    } else if (message.t === 'clip' && message.text === lastSentClip) {
+      lastSentClip = null;
     } else if (message.t === 'clip' && permissions.clipboard) {
       navigator.clipboard?.writeText(message.text).catch(() => {});
       setStatus('Text copied from host', true);
@@ -260,6 +278,10 @@ export function createViewer(options = {}) {
       video.srcObject = event.streams[0];
       video.play().catch(() => {});
       q('#connect-card')?.setAttribute('hidden', '');
+      q('.remote-stage')?.classList.add('is-connected');
+      const passwordField = q('#viewer-password');
+      if (passwordField) passwordField.value = '';
+      syncToolbar();
       setStatus(`Connected to ${data.hostInfo?.name || 'Desk'}${permissions.control ? '' : ' · view only'}`, true);
     };
     pc.ondatachannel = ({ channel }) => {
@@ -334,12 +356,13 @@ export function createViewer(options = {}) {
       pc?.close();
       pc = null;
       sessionId = null;
+      syncToolbar();
       pendingSignals = [];
       pendingSessionSignals = [];
       pendingSessionEvents = [];
       setStatus(['secure_desktop_unavailable', 'capture_failed'].includes(data.reason)
         ? 'Remote PC is on the lock screen / UAC prompt. Secure-desktop access needs the native helper (not installed).'
-        : `Request ${data.reason || 'rejected'}`);
+        : ({ declined: 'The other side declined the request.', busy: 'That Desk is already in another session.', bad_password: 'Wrong password.', agent_active: 'That Desk is busy. Try again in a moment.', connection_failed: 'Connection failed. Try again.' })[data.reason] || `Request ${data.reason || 'rejected'}`);
       if (data.reason === 'password_required') {
         setStatus('Password required');
         const passwordInput = q('#viewer-password');
@@ -362,6 +385,9 @@ export function createViewer(options = {}) {
       pendingSignals = [];
       pendingSessionSignals = [];
       pendingSessionEvents = [];
+      q('#connect-card')?.removeAttribute('hidden');
+      q('.remote-stage')?.classList.remove('is-connected');
+      syncToolbar();
       setStatus(data.reason === 'disconnect' ? 'Desk disconnected' : 'Session ended');
     }
   };
@@ -385,10 +411,21 @@ export function createViewer(options = {}) {
     pendingSignals = [];
     pendingSessionSignals = [];
     pendingSessionEvents = [];
+    syncToolbar();
     setStatus('Reconnecting…');
   });
 
+  syncToolbar();
+  const typedTarget = () => (q('#target-id')?.value || '').replace(/\s/g, '').toLowerCase();
+  q('#viewer-password')?.addEventListener('input', () => { passwordTarget = typedTarget(); });
+  q('#target-id')?.addEventListener('input', () => {
+    const field = q('#viewer-password');
+    if (field && typedTarget() !== passwordTarget) field.value = '';
+  });
   q('#connect-button')?.addEventListener('click', connect);
+  for (const field of [q('#target-id'), q('#viewer-password')]) {
+    field?.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); connect(); } });
+  }
   q('#disconnect-button')?.addEventListener('click', () => closeSession());
   q('#quality-select')?.addEventListener('change', (event) => setQuality(event.target.value));
   q('#mode-select')?.addEventListener('change', (event) => { controlEnabled = event.target.value === 'control'; if (!controlEnabled) releaseHeldKeys(); showViewOnly(); });
@@ -433,8 +470,12 @@ export function createViewer(options = {}) {
     }
   });
   q('#clipboard-button')?.addEventListener('click', async () => {
+    if (!permissions.clipboard) return setStatus('Clipboard is not allowed in this session', true);
     const text = await navigator.clipboard?.readText().catch(() => '');
-    if (text) sendCtl({ t: 'clip', text });
+    if (!text) return setStatus('Your clipboard is empty or the browser blocked access', true);
+    lastSentClip = text;
+    sendCtl({ t: 'clip', text });
+    setStatus('Clipboard sent to the remote PC', true);
   });
   q('#file-input')?.addEventListener('change', (event) => {
     sendFile(event.target.files[0]);
@@ -581,6 +622,7 @@ export function createViewer(options = {}) {
     if (statsElement && pc) statsElement.textContent = [relay, rtt, fps].filter(Boolean).join(' · ');
   }, 3000);
   window.addEventListener('beforeunload', () => closeSession());
+  if (!new URLSearchParams(location.search).has('id') && !sessionId) setStatus('Not connected');
   if (options.autoConnect !== false && new URLSearchParams(location.search).has('id') && socket.connected) connect();
   return { socket, connect, close: closeSession, zoom: applyZoom, get sessionId() { return sessionId; }, get quality() { return quality; }, get zoomLevel() { return zoom; } };
 }

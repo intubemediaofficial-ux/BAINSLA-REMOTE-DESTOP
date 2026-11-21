@@ -233,7 +233,7 @@ app.get('/api/admin/dashboard', requireAdmin, (_req, res) => {
 app.get('/api/admin/devices', requireAdmin, (req, res) => {
   const search = `%${String(req.query.search || '').trim()}%`;
   const rows = db.prepare(`SELECT * FROM devices WHERE id LIKE ? OR name LIKE ? OR alias LIKE ? ORDER BY last_seen DESC`).all(search, search, search);
-  res.json(rows.map((device) => ({ ...device, online: online.has(device.id) })));
+  res.json(rows.map(({ secret_hash: _secretHash, ...device }) => ({ ...device, online: online.has(device.id) })));
 });
 app.post('/api/admin/devices/:id/rename', requireAdmin, (req, res) => {
   const name = String(req.body?.name || '').trim().slice(0, 120);

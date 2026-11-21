@@ -377,9 +377,10 @@ body[data-viewer="true"] .viewer-layout, body.electron-viewer .viewer-layout { f
 .zoom-group button:last-child { border-radius: 0 8px 8px 0; }
 .zoom-group #zoom-label { min-width: 52px; border-left: 0; border-right: 0; font-variant-numeric: tabular-nums; }
 .remote-stage:not(.is-zoomed) #remote-video { position: absolute; inset: 0; }
-.remote-stage.is-zoomed { display: block; overflow: auto; }
-.remote-stage.is-zoomed #remote-video { display: block; max-width: none; max-height: none; object-fit: fill; margin: 0 auto; }
+.remote-stage.is-zoomed { display: grid; place-content: safe center; overflow: auto; }
+.remote-stage.is-zoomed #remote-video { display: block; max-width: none; max-height: none; object-fit: fill; }
 .remote-stage.is-zoomed .viewer-help { display: none; }
+.remote-stage.is-connected:not(.is-view-only) .viewer-help { opacity: 0; transition: opacity .4s ease 4s; }
 .remote-stage.is-view-only .viewer-help { left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); text-align: center; color: #fde68a; background: #000a; padding: 7px 12px; border-radius: 8px; font-size: 12px; }
 .viewer-tools > * { flex: none; }
 body[data-viewer="true"] .viewer-layout, body.electron-viewer .viewer-layout { position: relative; }

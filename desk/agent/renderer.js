@@ -282,6 +282,7 @@ async function startHostSession(data) {
       toast(`${data.viewerName || 'Viewer'}: ${message.text}`);
       addHostChat(session.id, data.viewerName || 'Viewer', String(message.text || ''));
     } else if (message.t === 'clip' && session.permissions.clipboard) {
+      previousClipboard = String(message.text || '');
       window.kv.writeClipboard(message.text);
     } else if (message.t === 'fs' && session.permissions.files) {
       const incoming = { id: message.id, size: message.size, received: 0 };
