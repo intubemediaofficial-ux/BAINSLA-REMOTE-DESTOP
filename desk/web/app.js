@@ -94,7 +94,7 @@ document.getElementById('connect').addEventListener('click', connect);
 document.getElementById('desk-id').addEventListener('keydown', (event) => event.key === 'Enter' && connect());
 fetch(api('/api/settings/public')).then((response) => response.json()).then((settings) => {
   document.getElementById('app-name').textContent = settings.app_name || 'Bainsla Remote';
-  document.title = `${settings.app_name || 'Bainsla Remote'} · Remote desktop`;
+  if (settings.app_name && settings.app_name !== 'Bainsla Remote') document.title = `${settings.app_name} · Remote desktop`;
   document.getElementById('announcement').textContent = settings.announcement || '';
   const win = document.getElementById('download-win');
   if (settings.win_url) win.href = settings.win_url;

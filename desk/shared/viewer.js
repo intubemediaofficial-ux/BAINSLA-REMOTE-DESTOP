@@ -339,7 +339,7 @@ export function createViewer(options = {}) {
       pendingSessionEvents = [];
       setStatus(['secure_desktop_unavailable', 'capture_failed'].includes(data.reason)
         ? 'Remote PC is on the lock screen / UAC prompt. Secure-desktop access needs the native helper (not installed).'
-        : `Request ${data.reason || 'rejected'}`);
+        : ({ declined: 'The other side declined the request.', busy: 'That Desk is already in another session.', bad_password: 'Wrong password.', agent_active: 'That Desk is busy. Try again in a moment.', connection_failed: 'Connection failed. Try again.' })[data.reason] || `Request ${data.reason || 'rejected'}`);
       if (data.reason === 'password_required') {
         setStatus('Password required');
         const passwordInput = q('#viewer-password');
@@ -433,8 +433,11 @@ export function createViewer(options = {}) {
     }
   });
   q('#clipboard-button')?.addEventListener('click', async () => {
+    if (!permissions.clipboard) return setStatus('Clipboard is not allowed in this session', true);
     const text = await navigator.clipboard?.readText().catch(() => '');
-    if (text) sendCtl({ t: 'clip', text });
+    if (!text) return setStatus('Your clipboard is empty or the browser blocked access', true);
+    sendCtl({ t: 'clip', text });
+    setStatus('Clipboard sent to the remote PC', true);
   });
   q('#file-input')?.addEventListener('change', (event) => {
     sendFile(event.target.files[0]);
@@ -581,6 +584,7 @@ export function createViewer(options = {}) {
     if (statsElement && pc) statsElement.textContent = [relay, rtt, fps].filter(Boolean).join(' · ');
   }, 3000);
   window.addEventListener('beforeunload', () => closeSession());
+  if (!new URLSearchParams(location.search).has('id') && !sessionId) setStatus('Not connected');
   if (options.autoConnect !== false && new URLSearchParams(location.search).has('id') && socket.connected) connect();
   return { socket, connect, close: closeSession, zoom: applyZoom, get sessionId() { return sessionId; }, get quality() { return quality; }, get zoomLevel() { return zoom; } };
 }

@@ -2,6 +2,7 @@ const base = location.pathname.replace(/\/$/, '');
 const $ = (id) => document.getElementById(id);
 const storeKey = 'bainsla-share-device';
 const CHUNK = 16 * 1024;
+const isCrawler = /bot|crawl|spider|slurp|lighthouse|preview/i.test(navigator.userAgent);
 const supported = Boolean(navigator.mediaDevices?.getDisplayMedia);
 let device = null;
 try { device = JSON.parse(localStorage.getItem(storeKey) || 'null'); } catch { device = null; }
@@ -19,7 +20,9 @@ function deviceName() {
   return { os, label: `${browser} on ${os} (browser share)` };
 }
 
-if (!supported) {
+if (isCrawler) {
+  $('share-code').textContent = '—';
+} else if (!supported) {
   $('share-code').textContent = '—';
   setStatus('This browser cannot share its screen. On a phone, install the Bainsla Remote app. You can still connect to others from the bar on top.');
 } else {
