@@ -404,3 +404,5 @@ body[data-viewer="true"] .viewer-layout, body.electron-viewer .viewer-layout { p
   .admin-side nav button, .admin-side .logout { font-size: 11px; padding: 8px 2px; text-align: center; margin: 0; line-height: 1.25; }
 }
 .sub-cell { display: block; color: #94a3b8; font-size: 12px; font-weight: 400; }
+.admin-user { min-width: 0; max-width: 45vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) { .admin-user { display: none; } }
