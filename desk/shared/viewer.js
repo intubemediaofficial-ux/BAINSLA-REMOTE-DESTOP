@@ -422,6 +422,9 @@ export function createViewer(options = {}) {
     if (field && typedTarget() !== passwordTarget) field.value = '';
   });
   q('#connect-button')?.addEventListener('click', connect);
+  for (const field of [q('#target-id'), q('#viewer-password')]) {
+    field?.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); connect(); } });
+  }
   q('#disconnect-button')?.addEventListener('click', () => closeSession());
   q('#quality-select')?.addEventListener('change', (event) => setQuality(event.target.value));
   q('#mode-select')?.addEventListener('change', (event) => { controlEnabled = event.target.value === 'control'; if (!controlEnabled) releaseHeldKeys(); showViewOnly(); });
