@@ -13,6 +13,7 @@ export function createViewer(options = {}) {
   let fileChannel;
   let sessionId;
   let permissions = { control: true, clipboard: true, files: true };
+  let lastSentClip = null;
   let receiving = null;
   let fileBusy = false;
   let touchTimer;
@@ -186,7 +187,7 @@ export function createViewer(options = {}) {
       }
     } else if (message.t === 'chat') {
       appendChat(message.text, 'host');
-    } else if (message.t === 'clip' && permissions.clipboard) {
+    } else if (message.t === 'clip' && permissions.clipboard && message.text !== lastSentClip) {
       navigator.clipboard?.writeText(message.text).catch(() => {});
       setStatus('Text copied from host', true);
     } else if (message.t === 'perm') {
@@ -436,6 +437,7 @@ export function createViewer(options = {}) {
     if (!permissions.clipboard) return setStatus('Clipboard is not allowed in this session', true);
     const text = await navigator.clipboard?.readText().catch(() => '');
     if (!text) return setStatus('Your clipboard is empty or the browser blocked access', true);
+    lastSentClip = text;
     sendCtl({ t: 'clip', text });
     setStatus('Clipboard sent to the remote PC', true);
   });
