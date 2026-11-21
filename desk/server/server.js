@@ -122,7 +122,7 @@ const requestIp = (req) => String(req.headers['x-forwarded-for'] || req.socket.r
 const secureFlag = (req) => (req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '');
 db.prepare('DELETE FROM admin_sessions WHERE expires_at <= ?').run(nowIso());
 db.prepare("UPDATE sessions SET ended_at = ?, end_reason = 'server_restart' WHERE ended_at IS NULL").run(nowIso());
-const adminSessionGet = db.prepare('SELECT email, expires_at FROM admin_sessions WHERE id = ?');
+const adminSessionGet = db.prepare('SELECT id, email, expires_at FROM admin_sessions WHERE id = ?');
 const adminSessionDelete = db.prepare('DELETE FROM admin_sessions WHERE id = ?');
 const prefixed = (route) => `${BASE_PATH}${route}` || '/';
 const publicSettings = () => Object.fromEntries(
@@ -159,7 +159,7 @@ const adminSession = (req) => {
     adminSessionDelete.run(id);
     return null;
   }
-  return { email: session.email, expiresAt: session.expires_at };
+  return { id, email: session.email, expiresAt: session.expires_at };
 };
 const requireAdmin = (req, res, next) => {
   const session = adminSession(req);
@@ -227,7 +227,7 @@ app.get('/api/admin/dashboard', requireAdmin, (_req, res) => {
     online: online.size,
     devices: db.prepare('SELECT COUNT(*) AS count FROM devices').get().count,
     sessionsToday: db.prepare('SELECT COUNT(*) AS count FROM sessions WHERE started_at >= ?').get(today.toISOString()).count,
-    activeSessions: db.prepare('SELECT * FROM sessions WHERE ended_at IS NULL ORDER BY started_at DESC').all()
+    activeSessions: db.prepare('SELECT s.*, d.name AS device_name FROM sessions s LEFT JOIN devices d ON d.id = s.device_id WHERE s.ended_at IS NULL ORDER BY s.started_at DESC').all()
   });
 });
 app.get('/api/admin/devices', requireAdmin, (req, res) => {
@@ -270,11 +270,12 @@ app.delete('/api/admin/devices/:id', requireAdmin, (req, res) => {
   if (!result.changes) return res.status(404).json({ error: 'not_found' });
   res.json({ ok: true });
 });
+const sessionList = 'SELECT s.*, d.name AS device_name FROM sessions s LEFT JOIN devices d ON d.id = s.device_id';
 app.get('/api/admin/sessions', requireAdmin, (req, res) => {
   const deviceId = String(req.query.deviceId || '');
   const rows = deviceId
-    ? db.prepare('SELECT * FROM sessions WHERE device_id = ? OR viewer_id = ? ORDER BY started_at DESC').all(deviceId, deviceId)
-    : db.prepare('SELECT * FROM sessions ORDER BY started_at DESC').all();
+    ? db.prepare(`${sessionList} WHERE s.device_id = ? OR s.viewer_id = ? OR lower(d.name) LIKE lower(?) ORDER BY s.started_at DESC LIMIT 300`).all(deviceId, deviceId, `%${deviceId}%`)
+    : db.prepare(`${sessionList} ORDER BY s.started_at DESC LIMIT 300`).all();
   res.json(rows);
 });
 app.post('/api/admin/sessions/:id/kill', requireAdmin, (req, res) => {
@@ -304,10 +305,8 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    if (req.params.kind.startsWith('mac-') && path.extname(file.originalname).toLowerCase() !== '.dmg') {
-      return cb(null, false);
-    }
-    cb(null, true);
+    const allowed = { win: '.exe', apk: '.apk', 'mac-arm64': '.dmg', 'mac-x64': '.dmg' }[req.params.kind];
+    cb(null, path.extname(file.originalname).toLowerCase() === allowed);
   }
 });
 app.post('/api/admin/settings/upload/:kind', requireAdmin, (req, res, next) => {
@@ -387,6 +386,7 @@ app.post('/api/admin/password', requireAdmin, (req, res) => {
   const admin = db.prepare('SELECT pw_hash FROM admins WHERE email = ?').get(req.admin.email);
   if (!bcrypt.compareSync(oldPassword, admin.pw_hash)) return res.status(400).json({ error: 'invalid_password' });
   db.prepare('UPDATE admins SET pw_hash = ? WHERE email = ?').run(bcrypt.hashSync(password, 12), req.admin.email);
+  db.prepare('DELETE FROM admin_sessions WHERE email = ? AND id != ?').run(req.admin.email, req.admin.id || '');
   res.json({ ok: true });
 });
 app.get(['/admin', '/admin/'], (_req, res) => res.sendFile(path.join(WEB_DIR, 'admin', 'index.html')));
@@ -398,6 +398,7 @@ app.get('*', (req, res, next) => {
 });
 app.use((err, _req, res, _next) => {
   if (err.status === 404) return res.status(404).json({ error: 'not_found' });
+  if (err.code === 'ECONNABORTED' || err.code === 'ECONNRESET' || res.headersSent) return res.end();
   console.error(err);
   res.status(err.status || 500).json({ error: 'internal_error' });
 });

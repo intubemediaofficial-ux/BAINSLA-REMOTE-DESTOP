@@ -5,12 +5,25 @@ const request = async (route, options = {}) => {
   const response = await fetch(api(route), { credentials: 'same-origin', ...options,
     headers: { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...options.headers } });
   if (response.status === 401) throw new Error('unauthorized');
-  const result = await response.json();
+  const result = await response.json().catch(() => ({ error: response.status === 413 ? 'file_too_large' : 'request_failed' }));
   if (!response.ok) throw new Error(result.error || 'request_failed');
   return result;
 };
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const time = (value) => value ? new Date(value).toLocaleString() : '—';
+const endReasons = {
+  viewer_closed: 'Viewer disconnected', disconnect: 'Connection lost', host_stopped: 'Host stopped sharing',
+  declined: 'Declined', bad_password: 'Wrong password', password_required: 'Password required', busy: 'Desk busy',
+  connection_failed: 'Connection failed', server_restart: 'Server restarted', admin_kill: 'Ended by admin',
+  blocked: 'Device blocked', deleted: 'Device deleted', timeout: 'No answer', ended: 'Ended'
+};
+const duration = (s) => {
+  if (!s.accepted_at) return '—';
+  const seconds = Math.max(0, Math.round(((s.ended_at ? new Date(s.ended_at) : new Date()) - new Date(s.accepted_at)) / 1000));
+  return seconds < 60 ? `${seconds} s` : seconds < 3600 ? `${Math.round(seconds / 60)} min` : `${Math.floor(seconds / 3600)} h ${Math.round((seconds % 3600) / 60)} min`;
+};
+const deskCell = (s) => s.device_name ? `<strong>${esc(s.device_name)}</strong><small class="sub-cell">${esc(s.device_id)}</small>` : esc(s.device_id);
+const actionError = (error) => alert(error.message === 'not_found' ? 'This item no longer exists. The list will refresh.' : 'Action failed. Please try again.');
 function renderLogin(message = '') {
   root.innerHTML = `<main class="login-wrap"><div class="login-card"><a class="brand" href="${base}/">Bainsla<span>Remote</span></a><h1>Admin sign in</h1><p>Manage devices and sessions.</p><form id="login-form"><label>Email<input name="email" type="email" value="intubemediaofficial@gmail.com" required></label><label>Password<input name="password" type="password" required autofocus></label><button class="button primary">Sign in</button><div class="form-error">${esc(message)}</div><button type="button" id="forgot-link" class="link-button">Forgot password?</button></form></div></main>`;
   root.querySelector('#forgot-link').onclick = () => renderForgot();
@@ -59,22 +72,27 @@ function renderForgot(step = 'email', email = 'intubemediaofficial@gmail.com', m
 }
 function shell() {
   root.innerHTML = `<div class="admin-shell"><aside class="admin-side"><a class="brand" href="${base}/">Bainsla<span>Remote</span></a><small>CONTROL PANEL</small><nav><button data-tab="dashboard" class="active">◫ &nbsp;Dashboard</button><button data-tab="devices">▣ &nbsp;Devices</button><button data-tab="sessions">◷ &nbsp;Sessions</button><button data-tab="settings">⚙ &nbsp;Settings</button></nav><button id="logout" class="logout">↪ &nbsp;Sign out</button></aside><main class="admin-main"><header><div><span class="eyebrow">ADMINISTRATION</span><h1 id="page-title">Dashboard</h1></div><span class="admin-user">Administrator</span></header><section id="tab-content"></section></main></div>`;
-  root.querySelector('#logout').onclick = async () => { await request('/api/admin/logout', { method: 'POST' }); renderLogin(); };
+  root.querySelector('#logout').onclick = async () => { await request('/api/admin/logout', { method: 'POST' }).catch(() => {}); renderLogin(); };
 }
 async function renderDashboard(container) {
   const data = await request('/api/admin/dashboard');
-  container.innerHTML = `<div class="stat-grid"><article class="stat-card"><span>Online now</span><strong>${data.online}</strong><small>Active devices</small></article><article class="stat-card"><span>Total devices</span><strong>${data.devices}</strong><small>Registered desks</small></article><article class="stat-card"><span>Sessions today</span><strong>${data.sessionsToday}</strong><small>Since midnight</small></article></div><section class="table-card"><div class="section-head"><div><h2>Active sessions</h2><p>Manage live connections</p></div><button class="button subtle" data-refresh>Refresh</button></div>${data.activeSessions.length ? `<div class="table-scroll"><table><thead><tr><th>Device</th><th>Viewer</th><th>Started</th><th>Mode</th><th></th></tr></thead><tbody>${data.activeSessions.map((s) => `<tr><td>${esc(s.device_id)}</td><td>${esc(s.viewer_name)}</td><td>${time(s.started_at)}</td><td>${esc(s.mode)}</td><td><button class="mini danger-text" data-kill="${s.id}">Kill</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No active sessions</div>'}</section>`;
+  container.innerHTML = `<div class="stat-grid"><article class="stat-card"><span>Online now</span><strong>${data.online}</strong><small>Active devices</small></article><article class="stat-card"><span>Total devices</span><strong>${data.devices}</strong><small>Registered desks</small></article><article class="stat-card"><span>Sessions today</span><strong>${data.sessionsToday}</strong><small>Since midnight</small></article></div><section class="table-card"><div class="section-head"><div><h2>Active sessions</h2><p>Manage live connections</p></div><button class="button subtle" data-refresh>Refresh</button></div>${data.activeSessions.length ? `<div class="table-scroll"><table><thead><tr><th>Device</th><th>Viewer</th><th>Started</th><th>Mode</th><th></th></tr></thead><tbody>${data.activeSessions.map((s) => `<tr><td>${deskCell(s)}</td><td>${esc(s.viewer_name)}</td><td>${time(s.started_at)}</td><td>${esc(s.mode)}</td><td><button class="mini danger-text" data-kill="${s.id}">Kill</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No active sessions</div>'}</section>`;
   container.querySelector('[data-refresh]').onclick = () => renderDashboard(container);
   container.querySelectorAll('[data-kill]').forEach((button) => button.onclick = async () => {
-    await request(`/api/admin/sessions/${button.dataset.kill}/kill`, { method: 'POST', body: '{}' });
+    if (!confirm('End this live session now?')) return;
+    await request(`/api/admin/sessions/${button.dataset.kill}/kill`, { method: 'POST', body: '{}' }).catch(actionError);
     renderDashboard(container);
   });
 }
 async function renderDevices(container) {
-  container.innerHTML = `<section class="table-card"><div class="section-head"><div><h2>Devices</h2><p>Registered remote desks</p></div><input id="device-search" class="search-input" placeholder="Search by ID or name"></div><div id="device-table"></div></section>`;
+  container.innerHTML = `<section class="table-card"><div class="section-head"><div><h2>Devices</h2><p id="device-count">Registered remote desks</p></div><input id="device-search" class="search-input" placeholder="Search by ID or name"></div><div id="device-table"></div></section>`;
+  let loadSeq = 0;
   const load = async () => {
+    const seq = ++loadSeq;
     const rows = await request(`/api/admin/devices?search=${encodeURIComponent(container.querySelector('#device-search').value)}`);
-    container.querySelector('#device-table').innerHTML = rows.length ? `<div class="table-scroll"><table><thead><tr><th>Desk</th><th>Alias</th><th>Platform</th><th>Version</th><th>Last seen</th><th>IP</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows.map((d) => `<tr><td><strong>${esc(d.name)}</strong><small class="sub-cell">${esc(d.id)}</small></td><td>${esc(d.alias || '—')}</td><td>${esc(d.platform)}</td><td>${esc(d.version)}</td><td>${time(d.last_seen)}</td><td>${esc(d.ip)}</td><td><span class="status-dot ${d.online ? 'online' : ''}"></span>${d.online ? 'Online' : 'Offline'}</td><td class="actions"><button class="mini" data-rename="${d.id}" data-name="${esc(d.name)}" data-alias="${esc(d.alias || '')}">Rename</button><button class="mini" data-block="${d.id}" data-blocked="${d.blocked}">${d.blocked ? 'Unblock' : 'Block'}</button><button class="mini danger-text" data-delete="${d.id}">Delete</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No devices found</div>';
+    if (seq !== loadSeq) return;
+    container.querySelector('#device-count').textContent = `${rows.length} desk${rows.length === 1 ? '' : 's'} · ${rows.filter((d) => d.online).length} online`;
+    container.querySelector('#device-table').innerHTML = rows.length ? `<div class="table-scroll"><table><thead><tr><th>Desk</th><th>Alias</th><th>Platform</th><th>Version</th><th>Last seen</th><th>IP</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows.map((d) => `<tr><td><strong>${esc(d.name)}</strong><small class="sub-cell">${esc(d.id)}</small></td><td>${esc(d.alias || '—')}</td><td>${esc(d.platform)}</td><td>${esc(d.version)}</td><td>${time(d.last_seen)}</td><td>${esc(d.ip)}</td><td><span class="status-dot ${d.online ? 'online' : ''}"></span>${d.online ? 'Online' : 'Offline'}${d.blocked ? '<span class="blocked-badge">Blocked</span>' : ''}</td><td class="actions"><button class="mini" data-rename="${d.id}" data-name="${esc(d.name)}" data-alias="${esc(d.alias || '')}">Rename</button><button class="mini" data-block="${d.id}" data-blocked="${d.blocked}">${d.blocked ? 'Unblock' : 'Block'}</button><button class="mini danger-text" data-delete="${d.id}" data-name="${esc(d.name)}">Delete</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No devices found</div>';
     container.querySelectorAll('[data-rename]').forEach((button) => button.onclick = async () => {
       const name = prompt('Device name', button.dataset.name);
       if (name === null) return;
@@ -83,38 +101,48 @@ async function renderDevices(container) {
         try {
           await request(`/api/admin/devices/${button.dataset.rename}/rename`, { method: 'POST', body: JSON.stringify({ name, alias }) });
           load();
-        } catch (error) { alert(error.message === 'alias_taken' ? 'That alias is already in use.' : 'Alias must be 3–32 letters, digits, or hyphens.'); }
+        } catch (error) { alert(({ alias_taken: 'That alias is already in use.', name_required: 'Device name cannot be empty.', not_found: 'This device no longer exists.' })[error.message] || 'Alias must be 3–32 letters, digits, or hyphens.'); }
       }
     });
     container.querySelectorAll('[data-block]').forEach((button) => button.onclick = async () => {
-      await request(`/api/admin/devices/${button.dataset.block}/${button.dataset.blocked === '1' ? 'unblock' : 'block'}`, { method: 'POST', body: '{}' }); load();
+      await request(`/api/admin/devices/${button.dataset.block}/${button.dataset.blocked === '1' ? 'unblock' : 'block'}`, { method: 'POST', body: '{}' }).catch(actionError); load();
     });
     container.querySelectorAll('[data-delete]').forEach((button) => button.onclick = async () => {
-      if (confirm('Delete this device?')) { await request(`/api/admin/devices/${button.dataset.delete}`, { method: 'DELETE' }); load(); }
+      if (confirm(`Delete "${button.dataset.name}" (${button.dataset.delete})? It will need to register again.`)) { await request(`/api/admin/devices/${button.dataset.delete}`, { method: 'DELETE' }).catch(actionError); load(); }
     });
   };
   container.querySelector('#device-search').oninput = load;
   await load();
 }
 async function renderSessions(container) {
-  container.innerHTML = `<section class="table-card"><div class="section-head"><div><h2>Sessions</h2><p>Connection history</p></div><input id="session-filter" class="search-input" placeholder="Filter by Desk ID"></div><div id="session-table"></div></section>`;
+  container.innerHTML = `<section class="table-card"><div class="section-head"><div><h2>Sessions</h2><p>Latest 300 connections</p></div><input id="session-filter" class="search-input" placeholder="Filter by Desk ID or name"></div><div id="session-table"></div></section>`;
+  let loadSeq = 0;
   const load = async () => {
-    const id = container.querySelector('#session-filter').value.trim();
+    const seq = ++loadSeq;
+    const raw = container.querySelector('#session-filter').value.trim();
+    const id = /^[\d\s]+$/.test(raw) ? raw.replace(/\s/g, '') : raw;
     const rows = await request(`/api/admin/sessions${id ? `?deviceId=${encodeURIComponent(id)}` : ''}`);
-    container.querySelector('#session-table').innerHTML = rows.length ? `<div class="table-scroll"><table><thead><tr><th>Desk</th><th>Viewer</th><th>Started</th><th>Duration</th><th>Mode</th><th>End reason</th></tr></thead><tbody>${rows.map((s) => `<tr><td>${esc(s.device_id)}</td><td>${esc(s.viewer_name || s.viewer_id || '—')}</td><td>${time(s.started_at)}</td><td>${s.accepted_at ? Math.max(1, Math.round(((s.ended_at ? new Date(s.ended_at) : new Date()) - new Date(s.accepted_at)) / 60000)) + ' min' : '—'}</td><td>${esc(s.mode)}</td><td>${esc(s.end_reason || 'Active')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No sessions found</div>';
+    if (seq !== loadSeq) return;
+    container.querySelector('#session-table').innerHTML = rows.length ? `<div class="table-scroll"><table><thead><tr><th>Desk</th><th>Viewer</th><th>Started</th><th>Duration</th><th>Mode</th><th>End reason</th></tr></thead><tbody>${rows.map((s) => `<tr><td>${deskCell(s)}</td><td>${esc(s.viewer_name || s.viewer_id || '—')}</td><td>${time(s.started_at)}</td><td>${duration(s)}</td><td>${esc(s.mode)}</td><td>${s.ended_at ? esc(endReasons[s.end_reason] || s.end_reason || 'Ended') : '<strong class="live-text">Active</strong>'}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No sessions found</div>';
   };
   container.querySelector('#session-filter').oninput = load;
   await load();
 }
 async function renderSettings(container) {
   const settings = await request('/api/admin/settings');
-  container.innerHTML = `<section class="settings-card"><div class="section-head"><div><h2>Application settings</h2><p>Customize Bainsla Remote for your team.</p></div></div><form id="settings-form" class="settings-form"><label>App name<input name="app_name" value="${esc(settings.app_name)}"></label><div class="two-cols"><label>Windows version<input name="win_version" value="${esc(settings.win_version)}"></label><label>Windows installer<input type="file" name="win_file" accept=".exe"></label></div><div class="two-cols"><label>Android version<input name="apk_version" value="${esc(settings.apk_version)}"></label><label>Android installer<input type="file" name="apk_file" accept=".apk"></label></div><div class="two-cols"><label>macOS version<input name="mac_version" value="${esc(settings.mac_version || '')}"></label><label>Apple Silicon Mac installer<input type="file" name="mac_arm64_file" accept=".dmg"></label></div><div class="two-cols"><label>Intel Mac installer<input type="file" name="mac_x64_file" accept=".dmg"></label><span></span></div><label>Announcement<textarea name="announcement" rows="3">${esc(settings.announcement)}</textarea></label><button class="button primary">Save settings</button><span class="save-status"></span></form></section><section class="settings-card"><h2>Change admin password</h2><form id="password-form" class="settings-form"><label>Current password<input name="oldPassword" type="password" required></label><label>New password<input name="password" type="password" minlength="8" required></label><button class="button primary">Update password</button></form></section>`;
+  const current = (file) => `<small class="sub-cell">${file ? `Current: ${esc(file)}` : 'No file uploaded'}</small>`;
+  container.innerHTML = `<section class="settings-card"><div class="section-head"><div><h2>Application settings</h2><p>Customize Bainsla Remote for your team.</p></div></div><form id="settings-form" class="settings-form"><label>App name<input name="app_name" value="${esc(settings.app_name)}"></label><div class="two-cols"><label>Windows version<input name="win_version" value="${esc(settings.win_version)}"></label><label>Windows installer<input type="file" name="win_file" accept=".exe">${current(settings.win_file)}</label></div><div class="two-cols"><label>Android version<input name="apk_version" value="${esc(settings.apk_version)}"></label><label>Android installer<input type="file" name="apk_file" accept=".apk">${current(settings.apk_file)}</label></div><div class="two-cols"><label>macOS version<input name="mac_version" value="${esc(settings.mac_version || '')}"></label><label>Apple Silicon Mac installer<input type="file" name="mac_arm64_file" accept=".dmg">${current(settings.mac_arm64_file)}</label></div><div class="two-cols"><label>Intel Mac installer<input type="file" name="mac_x64_file" accept=".dmg">${current(settings.mac_x64_file)}</label><span></span></div><label>Announcement<textarea name="announcement" rows="3">${esc(settings.announcement)}</textarea></label><button class="button primary">Save settings</button><span class="save-status"></span></form></section><section class="settings-card"><h2>Change admin password</h2><form id="password-form" class="settings-form"><label>Current password<input name="oldPassword" type="password" required></label><label>New password<input name="password" type="password" minlength="8" autocomplete="new-password" required></label><label>Confirm new password<input name="confirm" type="password" minlength="8" autocomplete="new-password" required></label><button class="button primary">Update password</button></form></section>`;
   container.querySelector('#settings-form').onsubmit = async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
+    const status = form.querySelector('.save-status');
+    const button = form.querySelector('.button.primary');
     const values = Object.fromEntries(new FormData(form));
     delete values.win_file; delete values.apk_file;
     delete values.mac_arm64_file; delete values.mac_x64_file;
+    button.disabled = true;
+    status.textContent = 'Saving…';
+    try {
     await request('/api/admin/settings', { method: 'POST', body: JSON.stringify(values) });
     for (const [kind, inputName] of [
       ['win', 'win_file'],
@@ -123,17 +151,25 @@ async function renderSettings(container) {
       ['mac-x64', 'mac_x64_file']
     ]) {
       const file = form.elements[inputName].files[0];
-      if (file) { const data = new FormData(); data.append('file', file); await request(`/api/admin/settings/upload/${kind}`, { method: 'POST', body: data }); }
+      if (file) { status.textContent = `Uploading ${file.name}…`; const data = new FormData(); data.append('file', file); await request(`/api/admin/settings/upload/${kind}`, { method: 'POST', body: data }); }
     }
-    form.querySelector('.save-status').textContent = 'Saved';
+    await renderSettings(container);
+    container.querySelector('.save-status').textContent = 'Saved';
+    } catch (error) {
+      button.disabled = false;
+      status.textContent = error.message === 'file_required' ? 'Wrong file type for this installer.' : error.message === 'file_too_large' ? 'File is too large.' : 'Could not save. Please try again.';
+    }
   };
   container.querySelector('#password-form').onsubmit = async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
+    const values = Object.fromEntries(new FormData(form));
+    if (values.password !== values.confirm) return alert('The two new passwords do not match.');
+    delete values.confirm;
     try {
-      await request('/api/admin/password', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(form))) });
+      await request('/api/admin/password', { method: 'POST', body: JSON.stringify(values) });
       form.reset();
-      alert('Password updated');
+      alert('Password updated. Other signed-in admin windows were signed out.');
     } catch (error) {
       alert(error.message === 'invalid_password' ? 'Current password is incorrect.'
         : error.message === 'too_many_attempts'
@@ -144,8 +180,9 @@ async function renderSettings(container) {
 const pages = { dashboard: renderDashboard, devices: renderDevices, sessions: renderSessions, settings: renderSettings };
 async function renderAdmin(tab = 'dashboard') {
   try {
-    await request('/api/admin/me');
+    const me = await request('/api/admin/me');
     if (!root.querySelector('.admin-shell')) shell();
+    root.querySelector('.admin-user').textContent = me.email || 'Administrator';
     root.querySelectorAll('[data-tab]').forEach((button) => {
       button.classList.toggle('active', button.dataset.tab === tab);
       button.onclick = () => renderAdmin(button.dataset.tab);
@@ -160,5 +197,5 @@ async function renderAdmin(tab = 'dashboard') {
 renderAdmin();
 setInterval(() => {
   const active = root.querySelector('[data-tab].active')?.dataset.tab;
-  if (active === 'dashboard') renderDashboard(root.querySelector('#tab-content'));
+  if (active === 'dashboard' && !document.hidden) renderDashboard(root.querySelector('#tab-content')).catch((error) => { if (error.message === 'unauthorized') renderLogin(); });
 }, 5000);

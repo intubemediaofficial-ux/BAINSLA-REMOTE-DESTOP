@@ -159,7 +159,10 @@ td strong { color: #1e293b; }
 .actions { white-space: nowrap; }
 .mini { border: 0; background: #f1f5f9; border-radius: 4px; color: #475569; padding: 5px 7px; font-size: 9px; margin: 1px 3px 1px 0; }
 .mini:hover { background: #e2e8f0; }
-.mini.danger-text { color: #3b63e6; }
+.mini.danger-text { color: #dc2626; }
+.blocked-badge { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #fee2e2; color: #b91c1c; font-size: 11px; font-weight: 700; }
+.live-text { color: #16a34a; }
+.settings-form label > .sub-cell { display: block; font-weight: 400; margin: 2px 0 4px; }
 .empty { text-align: center; padding: 35px 15px; color: #94a3b8; font-size: 12px; }
 .settings-card { max-width: 790px; }
 .settings-form { display: grid; gap: 15px; }
@@ -400,3 +403,4 @@ body[data-viewer="true"] .viewer-layout, body.electron-viewer .viewer-layout { p
   .admin-side nav { display: contents; }
   .admin-side nav button, .admin-side .logout { font-size: 11px; padding: 8px 2px; text-align: center; margin: 0; line-height: 1.25; }
 }
+.sub-cell { display: block; color: #94a3b8; font-size: 12px; font-weight: 400; }
