@@ -72,7 +72,11 @@ function renderForgot(step = 'email', email = 'intubemediaofficial@gmail.com', m
 }
 function shell() {
   root.innerHTML = `<div class="admin-shell"><aside class="admin-side"><a class="brand" href="${base}/">Bainsla<span>Remote</span></a><small>CONTROL PANEL</small><nav><button data-tab="dashboard" class="active">◫ &nbsp;Dashboard</button><button data-tab="devices">▣ &nbsp;Devices</button><button data-tab="sessions">◷ &nbsp;Sessions</button><button data-tab="settings">⚙ &nbsp;Settings</button></nav><button id="logout" class="logout">↪ &nbsp;Sign out</button></aside><main class="admin-main"><header><div><span class="eyebrow">ADMINISTRATION</span><h1 id="page-title">Dashboard</h1></div><span class="admin-user">Administrator</span></header><section id="tab-content"></section></main></div>`;
-  root.querySelector('#logout').onclick = async () => { await request('/api/admin/logout', { method: 'POST' }).catch(() => {}); renderLogin(); };
+  root.querySelector('#logout').onclick = async () => {
+    try { await request('/api/admin/logout', { method: 'POST' }); }
+    catch (error) { if (error.message !== 'unauthorized') return alert('Could not sign out. Check your connection and try again.'); }
+    renderLogin();
+  };
 }
 async function renderDashboard(container) {
   const data = await request('/api/admin/dashboard');
