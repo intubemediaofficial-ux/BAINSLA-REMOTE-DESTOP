@@ -415,10 +415,11 @@ export function createViewer(options = {}) {
   });
 
   syncToolbar();
+  const typedTarget = () => (q('#target-id')?.value || '').replace(/\s/g, '').toLowerCase();
+  q('#viewer-password')?.addEventListener('input', () => { passwordTarget = typedTarget(); });
   q('#target-id')?.addEventListener('input', () => {
-    const typed = q('#target-id').value.trim().replace(/\s/g, '').toLowerCase();
     const field = q('#viewer-password');
-    if (field && typed !== passwordTarget) field.value = '';
+    if (field && typedTarget() !== passwordTarget) field.value = '';
   });
   q('#connect-button')?.addEventListener('click', connect);
   q('#disconnect-button')?.addEventListener('click', () => closeSession());
