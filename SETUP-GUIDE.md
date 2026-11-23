@@ -26,7 +26,7 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt install -y node
 mkdir -p /opt/bainsla-desk/{data,downloads/update}
 cp -r desk/server desk/web desk/shared /opt/bainsla-desk/app/   # or: git clone and symlink
 cd /opt/bainsla-desk/app/server && npm ci --omit=dev
-cp deploy/bainsla-desk/env.example /opt/bainsla-desk/.env      # fill in every value
+install -m 600 deploy/bainsla-desk/env.example /opt/bainsla-desk/.env   # owner-only; fill in every value
 ```
 
 Start it:
