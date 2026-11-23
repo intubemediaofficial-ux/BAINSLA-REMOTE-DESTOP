@@ -52,7 +52,7 @@ TURN (needed when two PCs cannot connect directly): copy `deploy/bainsla-desk/tu
 ## 3. Windows app
 
 ```sh
-cd desk/agent && npm ci && npm run dist:win   # output: agent/release/BainslaRemote-Setup-<version>.exe
+cd desk/agent && npm ci && npm run dist:win   # output: desk/agent/dist/BainslaRemote-Setup-<version>.exe
 ```
 
 Or push to GitHub: `desk-windows.yml` builds it and publishes the `desk-latest` release.
